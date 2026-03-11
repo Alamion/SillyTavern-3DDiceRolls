@@ -27,7 +27,17 @@ Or manual: clone to `SillyTavern/data/default-user/extensions/`.
 
 ## Usage
 
-![GIF placeholder]
+![roll_dices.gif](docs/attachments/roll_dices.gif)
+
+### Settings
+- [ ] Enable 3D Dice Rolls                   // Toggles ordinary random / 3D dice rolling
+- [ ] Inject result in user prompt           // Injects result into user message box
+- [ ] Send result as chat message            // Sends result as chat message
+- [ ] Show dice buttons in UI                // Whether to show UI buttons with Dice Pool choice or not
+- [ ] Show roll history                      // Whether to show UI Dice Roll History menu or not
+- [ ] Enable AI function tool for dice rolls // Gives AI an opportunity to invoke dice rolling
+- [ ] Primary dice color (faces)             // Determines the color of dice sides (both 2D and 3D)
+- [ ] Secondary dice color (text)            // Determines the color of text on dices sides (both 2D and 3D)
 
 ### Command
 Supports [dice notation](https://dice-roller.github.io/documentation/guide/notation/) (in a simplified form for now)
