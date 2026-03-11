@@ -43,6 +43,6 @@ if (manifestChanged && hasCodeChanges) {
 
 console.log('\x1b[32m✓ Version check passed\x1b[0m');
 
-
+execSync('npm run build', { stdio: 'inherit' });
 
 process.exit(0);
