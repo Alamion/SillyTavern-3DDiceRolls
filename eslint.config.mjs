@@ -31,7 +31,7 @@ export default defineConfig([
         },
     },
     {
-        ignores: ['**/dist/**', '**/node_modules/**', '**/tmp/**', 'webpack.config.js', 'postcss.config.js'],
+        ignores: ['**/dist/**', '**/node_modules/**', '**/tmp/**', 'webpack.config.js', 'postcss.config.js', 'check-version.js'],
     },
     {
         rules: {

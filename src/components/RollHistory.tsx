@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { RollResult } from '../dice-logic';
-import {DiceD12} from "./2d_dices";
-import {getSettings} from "../utils/settings";
+import { DiceD12 } from './2d_dices';
+import { getSettings } from '../utils/settings';
 
 interface RollHistoryProps {
   rolls: RollResult[];
@@ -36,7 +36,7 @@ export default function RollHistory({
         return (
             <div className="roll-history-collapsed">
                 <button
-                    className="roll-history-toggle"
+                    className="roll-history-toggle ui-toggle"
                     onClick={() => setIsExpanded(true)}
                     title={`Open roll history (${rolls.length} rolls)`}
                     type="button"
@@ -88,7 +88,8 @@ export default function RollHistory({
                 </div>
             )}
 
-            <div className="roll-history-actions">
+            <div className="roll-history-header">
+
                 <button
                     className="roll-history-btn roll-history-btn-clear"
                     onClick={clearHistory}
@@ -98,9 +99,6 @@ export default function RollHistory({
                 >
                     Clear
                 </button>
-            </div>
-
-            <div className="roll-history-header">
                 <span className="roll-history-title">Roll History</span>
                 <button
                     className="roll-history-btn roll-history-btn-close"

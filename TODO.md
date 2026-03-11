@@ -1,9 +1,0 @@
-- divide css into separate element based scss files + add them to build process
-- add pre-commit version dump check
-- add 3d d2 dice
-- add screenshots and a GIF to docs
-- check for desk's shadows
-- add a die roll event listener and an invoker as entry points to interact with other plugins
-- performance optimizations and weight reduction
-- legalize css variables (for now using SillyTavern's core ones invoke "can't resolve" errors)
-- check webpack's "Validates to more than one variant" warning

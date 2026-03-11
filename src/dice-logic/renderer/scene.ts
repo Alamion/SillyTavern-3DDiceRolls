@@ -9,16 +9,16 @@ import {
     Vector3,
     WebGLRenderer,
     PCFSoftShadowMap, //CameraHelper,
-} from 'three'
+} from 'three';
 
 export class SceneManager {
-    renderer: WebGLRenderer
-    scene: Scene
-    camera!: PerspectiveCamera
-    ambientLight!: AmbientLight
-    directionalLight!: DirectionalLight
-    desk!: Mesh
-    shadows = true
+    renderer: WebGLRenderer;
+    scene: Scene;
+    camera!: PerspectiveCamera;
+    ambientLight!: AmbientLight;
+    directionalLight!: DirectionalLight;
+    desk!: Mesh;
+    shadows = true;
 
     display: { [key: string]: number } = {
         currentWidth: 0,
@@ -27,92 +27,92 @@ export class SceneManager {
         containerHeight: 0,
         aspect: 0,
         scale: 0,
-    }
+    };
 
     cameraHeight: { [key: string]: number } = {
         max: 0,
         close: 0,
         medium: 0,
         far: 0,
-    }
+    };
 
     constructor() {
         this.renderer = new WebGLRenderer({
             alpha: true,
             antialias: true,
-        })
-        this.renderer.shadowMap.enabled = this.shadows
-        this.renderer.shadowMap.type = PCFSoftShadowMap
-        this.scene = new Scene()
+        });
+        this.renderer.shadowMap.enabled = this.shadows;
+        this.renderer.shadowMap.type = PCFSoftShadowMap;
+        this.scene = new Scene();
     }
 
     get WIDTH(): number {
-        return this.display.currentWidth
+        return this.display.currentWidth;
     }
 
     get HEIGHT(): number {
-        return this.display.currentHeight
+        return this.display.currentHeight;
     }
 
     get canvasEl(): HTMLCanvasElement | null {
-        return this.renderer.domElement
+        return this.renderer.domElement;
     }
 
     setDimensions(width: number, height: number): void {
-        this.display.currentWidth = width / 2
-        this.display.currentHeight = height / 2
-        this.display.containerWidth = this.display.currentWidth
-        this.display.containerHeight = this.display.currentHeight
+        this.display.currentWidth = width / 2;
+        this.display.currentHeight = height / 2;
+        this.display.containerWidth = this.display.currentWidth;
+        this.display.containerHeight = this.display.currentHeight;
 
         this.display.aspect = Math.min(
             this.display.currentWidth / this.display.containerWidth,
             this.display.currentHeight / this.display.containerHeight,
-        )
+        );
         this.display.scale =
             Math.sqrt(
                 this.display.containerWidth * this.display.containerWidth +
                 this.display.containerHeight * this.display.containerHeight,
-            ) / 13
+            ) / 13;
 
         this.renderer.setSize(
             this.display.currentWidth * 2,
             this.display.currentHeight * 2,
-        )
+        );
 
         this.cameraHeight.max =
             this.display.currentHeight /
             this.display.aspect /
-            Math.tan((10 * Math.PI) / 180)
+            Math.tan((10 * Math.PI) / 180);
 
-        this.cameraHeight.medium = this.cameraHeight.max / 1.5
-        this.cameraHeight.far = this.cameraHeight.max
-        this.cameraHeight.close = this.cameraHeight.max / 2
+        this.cameraHeight.medium = this.cameraHeight.max / 1.5;
+        this.cameraHeight.far = this.cameraHeight.max;
+        this.cameraHeight.close = this.cameraHeight.max / 2;
     }
 
     initCamera(): void {
-        if (this.camera) this.scene.remove(this.camera)
+        if (this.camera) this.scene.remove(this.camera);
         this.camera = new PerspectiveCamera(
             35,
             this.display.currentWidth / this.display.currentHeight,
             10,
             this.cameraHeight.max * 1.3,
-        )
-        this.camera.position.z = this.cameraHeight.medium
-        this.camera.lookAt(new Vector3(0, 0, 0))
+        );
+        this.camera.position.z = this.cameraHeight.medium;
+        this.camera.lookAt(new Vector3(0, 0, 0));
     }
 
     initLighting(): void {
         const maxwidth = Math.max(
             this.display.containerWidth,
             this.display.containerHeight,
-        )
+        );
 
-        if (this.ambientLight) this.scene.remove(this.ambientLight)
-        if (this.directionalLight) this.scene.remove(this.directionalLight)
+        if (this.ambientLight) this.scene.remove(this.ambientLight);
+        if (this.directionalLight) this.scene.remove(this.directionalLight);
 
-        this.directionalLight = new DirectionalLight(0xffffff, 0.8)
-        this.directionalLight.position.set(-maxwidth / 2, maxwidth / 2, maxwidth )
-        this.directionalLight.castShadow = this.shadows
+        this.directionalLight = new DirectionalLight(0xffffff, 0.8);
+        this.directionalLight.position.set(-maxwidth / 2, maxwidth / 2, maxwidth );
+        this.directionalLight.castShadow = this.shadows;
         // this.directionalLight.shadow.camera.near = maxwidth / 10
         // this.directionalLight.shadow.camera.far = maxwidth * 5
         // this.directionalLight.shadow.camera.left = -maxwidth * 0.8
@@ -122,21 +122,21 @@ export class SceneManager {
         // this.directionalLight.shadow.mapSize.width = 2048
         // this.directionalLight.shadow.mapSize.height = 2048
         // this.directionalLight.shadow.bias = -0.001
-        this.scene.add(this.directionalLight)
+        this.scene.add(this.directionalLight);
 
         // if (process.env.NODE_ENV !== 'production') {
         //     const shadowCameraHelper = new CameraHelper(this.directionalLight.shadow.camera);
         //     this.scene.add(shadowCameraHelper);
         // }
 
-        this.ambientLight = new AmbientLight(0xffffff, 0.2)
-        this.scene.add(this.ambientLight)
+        this.ambientLight = new AmbientLight(0xffffff, 0.2);
+        this.scene.add(this.ambientLight);
     }
 
     initDesk(): void {
-        if (this.desk) this.scene.remove(this.desk)
-        const shadowplane = new ShadowMaterial()
-        shadowplane.opacity = 1
+        if (this.desk) this.scene.remove(this.desk);
+        const shadowplane = new ShadowMaterial();
+        shadowplane.opacity = 1;
         this.desk = new Mesh(
             new PlaneGeometry(
                 this.display.containerWidth * 6,
@@ -145,36 +145,36 @@ export class SceneManager {
                 1,
             ),
             shadowplane,
-        )
-        this.desk.receiveShadow = this.shadows
+        );
+        this.desk.receiveShadow = this.shadows;
         // Rotate desk to be a horizontal floor at z=0
-        this.desk.rotation.x = -Math.PI / 2
-        this.desk.position.set(0, 0, -0.01)
-        this.scene.add(this.desk)
+        this.desk.rotation.x = -Math.PI / 2;
+        this.desk.position.set(0, 0, -0.01);
+        this.scene.add(this.desk);
     }
 
     initScene(width: number, height: number): void {
-        this.setDimensions(width, height)
-        this.initCamera()
-        this.initLighting()
-        this.initDesk()
-        this.camera.updateProjectionMatrix()
+        this.setDimensions(width, height);
+        this.initCamera();
+        this.initLighting();
+        this.initDesk();
+        this.camera.updateProjectionMatrix();
     }
 
     render(): void {
-        this.renderer.render(this.scene, this.camera)
+        this.renderer.render(this.scene, this.camera);
     }
 
     add(...mesh: Mesh[]): void {
-        this.scene.add(...mesh)
+        this.scene.add(...mesh);
     }
 
     remove(...mesh: Mesh[]): void {
-        this.scene.remove(...mesh)
+        this.scene.remove(...mesh);
     }
 
     dispose(): void {
-        this.renderer.dispose()
-        this.scene.clear()
+        this.renderer.dispose();
+        this.scene.clear();
     }
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20, DiceD100, DiceDUnknown } from './2d_dices';
-import {debug} from "../utils/logging";
-import {getSettings} from "../utils/settings";
+import { debug } from '../utils/logging';
+import { getSettings } from '../utils/settings';
 
 interface DiceConfig {
     notation: string;
@@ -50,8 +50,8 @@ export default function DicePool({
     const [dicePool, setDicePool] = useState<string[]>([]);
 
     const settings = getSettings();
-    const primaryColor=settings.primaryDiceColor
-    const secondaryColor= settings.secondaryDiceColor
+    const primaryColor = settings.primaryDiceColor;
+    const secondaryColor = settings.secondaryDiceColor;
 
     const addToPool = (notation: string) => {
         setDicePool(prev => [...prev, notation]);
@@ -80,7 +80,7 @@ export default function DicePool({
         return (
             <div className="dice-pool-collapsed">
                 <button
-                    className="dice-pool-toggle"
+                    className="dice-pool-toggle ui-toggle"
                     onClick={() => setIsExpanded(true)}
                     title="Open dice pool"
                     type="button"

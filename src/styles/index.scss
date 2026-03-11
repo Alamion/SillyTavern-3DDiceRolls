@@ -1,0 +1,19 @@
+@use 'variables' as *;
+@use 'dice-container';
+@use 'dice-pool';
+@use 'roll-history';
+@use 'extension_settings';
+
+
+.ui-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-md;
+    background: var(--SmartThemeBlurTintColor);
+    border: 2px solid var(--SmartThemeBorderColor);
+    border-radius: $border-radius-round;
+    cursor: pointer;
+    transition: $transition-normal;
+    box-shadow: 0 2px 8px var(--SmartThemeShadowColor);
+}

@@ -5,7 +5,6 @@ import DicePool from '../components/DicePool';
 import RollHistory from '../components/RollHistory';
 import { debug, warn, error } from './logging';
 import { onRollResult } from '../dice-logic';
-import type { MixedRollConfig } from '../dice-logic';
 
 const DICE_ROLL_HISTORY_KEY = '3d_dice_rolls';
 
@@ -85,21 +84,10 @@ function setupChatChangeListener(): void {
     }
 }
 
-function getRollConfig(): MixedRollConfig {
-    const settings = getSettings();
-    const textColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--SmartThemeBodyColor').trim() || '#ffffff';
-
-    return {
-        diceColor: settings.primaryDiceColor,
-        textColor: textColor,
-        enable3dDice: settings.enable3dDice,
-    };
-}
-
 function startSettingsWatcher(): void {
     let lastSettings = JSON.stringify(getSettings());
     let lastPrimaryColor = getSettings().primaryDiceColor;
+    let lastSecondaryColor = getSettings().secondaryDiceColor;
     let lastShowDiceButtons = getSettings().showDiceButtons;
 
     settingsCheckInterval = setInterval(() => {
@@ -109,9 +97,10 @@ function startSettingsWatcher(): void {
             lastSettings = currentSettingsStr;
 
             // Check if primary color changed
-            if (currentSettings.primaryDiceColor !== lastPrimaryColor) {
+            if (currentSettings.primaryDiceColor !== lastPrimaryColor || currentSettings.secondaryDiceColor !== lastSecondaryColor) {
                 lastPrimaryColor = currentSettings.primaryDiceColor;
-                debug('Primary color changed to:', currentSettings.primaryDiceColor);
+                lastSecondaryColor = currentSettings.secondaryDiceColor;
+                debug('Colors changed to:', currentSettings.primaryDiceColor, currentSettings.secondaryDiceColor);
                 // Rerender dice buttons with new color
                 if (diceButtonsContainer && diceButtonsRoot) {
                     diceButtonsRoot.render(
@@ -251,19 +240,3 @@ function setupRollListener(): void {
         }
     });
 }
-
-export function toggleDiceButtons(visible: boolean): void {
-    if (diceButtonsContainer) {
-        diceButtonsContainer.style.display = visible ? '' : 'none';
-        debug('Dice buttons toggled:', visible);
-    }
-}
-
-export function toggleRollHistory(visible: boolean): void {
-    if (rollHistoryContainer) {
-        rollHistoryContainer.style.display = visible ? '' : 'none';
-        debug('Roll history toggled:', visible);
-    }
-}
-
-export { getRollConfig };

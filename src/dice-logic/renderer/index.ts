@@ -1,6 +1,6 @@
-export { DiceRenderer, type DiceRendererConfig, type RollCompleteCallback } from './renderer'
-export { SceneManager } from './scene'
-export { PhysicsWorld } from './physics'
+export { DiceRenderer, type DiceRendererConfig, type RollCompleteCallback } from './renderer';
+export { SceneManager } from './scene';
+export { PhysicsWorld } from './physics';
 export {
     D4Dice,
     D6Dice,
@@ -10,7 +10,7 @@ export {
     D20Dice,
     D100Dice,
     type DiceShape,
-} from './shapes'
+} from './shapes';
 export {
     D4DiceGeometry,
     D6DiceGeometry,
@@ -21,6 +21,6 @@ export {
     D100DiceGeometry,
     type DiceGeometryData,
     default as DiceGeometry,
-} from './geometries'
-export { ResourceTracker } from './resource'
-export { DiceFactory, type DiceFactoryConfig, create3DDiceRoll } from './factory'
+} from './geometries';
+export { ResourceTracker } from './resource';
+export { DiceFactory, type DiceFactoryConfig, create3DDiceRoll } from './factory';

@@ -1,0 +1,165 @@
+@use 'variables' as *;
+
+#roll-history-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+.roll-history-collapsed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.roll-history-toggle {
+    position: relative;
+
+    &:hover {
+        background-color: var(--SmartThemeEmColor);
+        transform: scale(1.05);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}
+
+.roll-history-icon {
+    font-size: $font-size-xl;
+}
+
+.roll-history-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+    font-size: $font-size-xs;
+    font-weight: bold;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+.roll-history-container {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+    padding: $spacing-xl;
+    background: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: $border-radius-lg;
+    box-shadow: 0 4px 12px var(--SmartThemeShadowColor);
+    min-width: $container-min-width;
+    max-width: $container-max-width;
+}
+
+.roll-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: $spacing-md;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+.roll-history-title {
+    font-size: $font-size-lg;
+    font-weight: bold;
+    color: var(--SmartThemeBodyColor);
+}
+
+.roll-history-content {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: $spacing-sm;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.roll-history-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--SmartThemeBodyColor);
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.roll-history-item {
+    display: flex;
+    flex-direction: row;
+    gap: $spacing-xs;
+    padding: $spacing-md $spacing-lg;
+    border-radius: $border-radius-sm;
+    backdrop-filter: blur(5px);
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor), transparent 40%);
+
+    &.latest {
+        flex-direction: column;
+        background: color-mix(in srgb, var(--SmartThemeQuoteColor), transparent 75%);
+    }
+}
+
+.roll-history-notation {
+    font-weight: bold;
+    color: var(--SmartThemeEmColor);
+    font-size: $font-size-md;
+}
+
+.roll-history-dice {
+    font-size: $font-size-xs;
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.9;
+}
+
+.roll-history-total {
+    font-size: $font-size-base;
+    font-weight: bold;
+    color: var(--SmartThemeBodyColor);
+}
+
+.roll-history-actions {
+    display: flex;
+    gap: $spacing-md;
+    justify-content: space-between;
+}
+
+.roll-history-btn {
+    padding: $spacing-sm $spacing-xl;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+    transition: $transition-fast;
+    color: var(--SmartThemeBodyColor);
+    flex: 1;
+
+    &:hover:not(:disabled) {
+        opacity: 0.8;
+        transform: translateY(-1px);
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
+.roll-history-btn-clear {
+    flex: 0;
+    background: var(--SmartThemeBlurTintColor);
+}
+
+.roll-history-btn-close {
+    background: transparent;
+    flex: 0;
+    padding: $spacing-sm $spacing-lg;
+    font-size: $font-size-lg;
+}

@@ -1,7 +1,8 @@
-import { debug, warn, error } from './logging';
+import { debug, error, warn } from './logging';
 import { DEFAULT_SETTINGS, MODULE_NAME } from './constants';
 import { registerRollCommand } from './commands';
 import { registerFunctionTools } from './function-tools';
+import { registerDiceRollEvent } from './events';
 
 export interface DiceRollerSettings {
     enable3dDice: boolean;
@@ -80,6 +81,7 @@ export function initSettings(): void {
 
         registerRollCommand();
         registerFunctionTools();
+        registerDiceRollEvent();
 
         debug('3D Dice Roller initialized successfully');
     } catch (err) {
@@ -89,4 +91,20 @@ export function initSettings(): void {
 
 export function getContext() {
     return globalThis.SillyTavern.getContext();
+}
+
+export interface MixedRollConfig {
+    diceColor: string;
+    textColor: string;
+    enable3dDice: boolean;
+}
+
+export function getRollConfig(): MixedRollConfig {
+    const settings = getSettings();
+
+    return {
+        diceColor: settings.primaryDiceColor,
+        textColor: settings.secondaryDiceColor,
+        enable3dDice: settings.enable3dDice,
+    };
 }

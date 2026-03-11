@@ -1,0 +1,41 @@
+@use 'sass:color';
+
+:root {
+    --SmartThemeBodyColor: initial;
+    --SmartThemeEmColor: initial;
+    --SmartThemeUnderlineColor: initial;
+    --SmartThemeQuoteColor: initial;
+    //--SmartThemeFastUIBGColor: initial;
+    --SmartThemeBlurTintColor: initial;
+    --SmartThemeChatTintColor: initial;
+    --SmartThemeUserMesBlurTintColor: initial;
+    --SmartThemeBotMesBlurTintColor: initial;
+    --SmartThemeBlurStrength: initial;
+    --SmartThemeShadowColor: initial;
+    --SmartThemeBorderColor: initial;
+}
+
+$transition-fast: all 0.15s ease;
+$transition-normal: all 0.2s ease;
+
+$spacing-xs: 2px;
+$spacing-sm: 6px;
+$spacing-md: 8px;
+$spacing-lg: 10px;
+$spacing-xl: 12px;
+$spacing-2xl: 16px;
+
+$border-radius-sm: 6px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-round: 50%;
+
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-md: 13px;
+$font-size-base: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 24px;
+
+$container-min-width: 350px;
+$container-max-width: 350px;

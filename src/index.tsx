@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import SettingsPanel from './components/SettingsPanel';
 import { initBodyUI } from './utils/body-injection';
 import { getContext, initSettings } from './utils/settings';
-import './index.css';
+import './styles/index.scss';
 import 'toastr/build/toastr.min.css';
 
 const context = getContext();
@@ -26,3 +26,4 @@ if (rootContainer) {
 }
 
 initBodyUI();
+export type { MixedRollConfig } from './utils/settings';

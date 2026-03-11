@@ -1,22 +1,6 @@
-import { debug, warn, error } from './logging';
-import { getContext, getSettings } from './settings';
-import {
-    executeUnifiedRoll,
-    execute2DRoll,
-    type MixedRollConfig,
-} from '../dice-logic';
-
-function getRollConfig(): MixedRollConfig {
-    const settings = getSettings();
-    const textColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--SmartThemeBodyColor').trim() || '#ffffff';
-
-    return {
-        diceColor: settings.primaryDiceColor,
-        textColor: textColor,
-        enable3dDice: settings.enable3dDice,
-    };
-}
+import { debug, error, warn } from './logging';
+import { getContext, getRollConfig, getSettings } from './settings';
+import { execute2DRoll, executeUnifiedRoll } from '../dice-logic';
 
 export function registerFunctionTools(): void {
     try {

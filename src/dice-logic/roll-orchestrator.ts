@@ -1,25 +1,11 @@
 import { parseDiceNotation } from './dice-parser';
-import {
-    rollDices,
-    notifyRollResult as notifyBaseRollResult,
-    onRollResult as onBaseRollResult,
-} from './dice-roller';
+import { notifyRollResult as notifyBaseRollResult, onRollResult as onBaseRollResult, rollDices } from './dice-roller';
 import { DiceFactory } from './renderer';
-import type {
-    DiceGroup,
-    DiceRoll,
-    DiceGroupResult,
-    RollResult,
-} from './types';
+import type { DiceGroup, DiceGroupResult, DiceRoll, RollResult } from './types';
 import { debug, warn } from '../utils/logging';
+import { MixedRollConfig } from '../utils/settings';
 
 const SUPPORTED_3D_SIDES = new Set([4, 6, 8, 10, 12, 20, 100]);
-
-export interface MixedRollConfig {
-    diceColor: string;
-    textColor: string;
-    enable3dDice: boolean;
-}
 
 function shouldUse3D(diceGroup: DiceGroup): boolean {
     return SUPPORTED_3D_SIDES.has(diceGroup.sides);
@@ -232,11 +218,6 @@ async function executeMixedRoll(
     };
 }
 
-export function getDefaultTextColor(): string {
-    return getComputedStyle(document.documentElement)
-        .getPropertyValue('--SmartThemeBodyColor').trim() || '#ffffff';
-}
-
 export async function executeUnifiedRoll(
     notation: string,
     config?: Partial<MixedRollConfig>,
@@ -245,7 +226,7 @@ export async function executeUnifiedRoll(
 
     const defaultConfig: MixedRollConfig = {
         diceColor: '#4a90e2',
-        textColor: getDefaultTextColor(),
+        textColor: '#ffffff',
         enable3dDice: false,
         ...config,
     };

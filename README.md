@@ -2,8 +2,6 @@
 
 Roll dices in SillyTavern. Fast, behind the screen, or with stunning 3D physics.
 
-![Screenshot placeholder - main UI]
-
 ---
 
 ## Why This Extension?
@@ -33,26 +31,37 @@ Or manual: clone to `SillyTavern/data/default-user/extensions/`.
 
 ### Command
 Supports [dice notation](https://dice-roller.github.io/documentation/guide/notation/) (in a simplified form for now)
+
 ```
 /roll 2d6+3
 /roll 4d20kh3
 ```
 
-![Screenshot placeholder]
+![command.png](docs/attachments/command.png)
 
 ### UI Buttons
 
-![Screenshot placeholder]
+![ui_buttons.png](docs/attachments/ui_buttons.png)
 
 ### Roll History
 
-![Screenshot placeholder]
+![roll_history.png](docs/attachments/roll_history.png)
 
 ### AI Function Calls
 
 Enable "AI function tool" in settings. AI can now call `RollTheDice` with formulas like `"1d20+5"`.
 
-![Screenshot placeholder]
+![function_call.png](docs/attachments/function_call.png)
+
+### External Extensions
+
+Other SillyTavern extensions can trigger dice rolls via the event system. The roll uses this extension's settings (3D/2D mode, output destinations).
+
+```typescript
+// Trigger a roll from another extension
+const context = SillyTavern.getContext();
+context.eventSource.emit('3ddicerolls:roll', { notation: '2d6+3' });
+```
 
 ---
 

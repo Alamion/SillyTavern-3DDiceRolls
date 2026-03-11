@@ -1,9 +1,8 @@
-import { getContext, getSettings } from './settings';
+import { getContext, getRollConfig, getSettings } from './settings';
 import { debug, warn, error } from './logging';
 import {
     executeUnifiedRoll,
     execute2DRoll,
-    type MixedRollConfig,
 } from '../dice-logic';
 import {
     notifyRollResult as notifyRollResultBase,
@@ -38,18 +37,6 @@ function injectResult(result: RollResult): void {
 function sendAsChatMessage(result: RollResult): void {
     const context = getContext();
     context.sendSystemMessage('generic', formatResultForDisplay(result, 'compact'));
-}
-
-function getRollConfig(): MixedRollConfig {
-    const settings = getSettings();
-    const textColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--SmartThemeBodyColor').trim() || '#ffffff';
-
-    return {
-        diceColor: settings.primaryDiceColor,
-        textColor: textColor,
-        enable3dDice: settings.enable3dDice,
-    };
 }
 
 export function registerRollCommand(): void {
