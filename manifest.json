@@ -1,12 +1,12 @@
 {
-    "display_name": "Template Extension",
-    "loading_order": 1,
+    "display_name": "3D dice roller",
+    "loading_order": 10,
     "requires": [],
     "optional": [],
     "js": "dist/index.js",
     "css": "",
-    "author": "Cohee1207",
+    "author": "Alamion",
     "version": "1.0.0",
-    "homePage": "https://github.com/Cohee1207/Extension-ReactTemplate",
+    "homePage": "https://github.com/Alamion/SillyTavern-3DDiceRolls",
     "auto_update": true
 }

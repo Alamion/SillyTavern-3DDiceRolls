@@ -2,24 +2,28 @@ const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
-    entry: path.join(__dirname, 'src/index.js'),
+    entry: path.join(__dirname, 'src/index.tsx'),
     output: {
         path: path.join(__dirname, 'dist/'),
         filename: `index.js`,
     },
+    resolve: {
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+    },
     module: {
         rules: [
             {
-                test: /\.js/,
-                exclude: /node_modules/,
-                options: {
-                    cacheDirectory: true,
-                    presets: [
-                        '@babel/preset-env',
-                        ['@babel/preset-react', { runtime: 'automatic' }],
-                    ],
-                },
-                loader: 'babel-loader',
+                test: /\.tsx?$/,
+                exclude: [/node_modules/, /\.d\.ts$/],
+                use: 'ts-loader',
+            },
+            {
+                test: /\.css$/,
+                use: ['style-loader', 'css-loader', 'postcss-loader'],
+            },
+            {
+                test: /\.html$/,
+                use: { loader: 'html-loader' },
             },
         ],
     },
@@ -27,6 +31,11 @@ module.exports = {
         minimize: true,
         minimizer: [new TerserPlugin({
             extractComments: false,
+            terserOptions: {
+                format: {
+                    comments: false,
+                },
+            },
         })],
     },
 };
