@@ -1,10 +1,15 @@
 @use 'variables' as *;
 
 #roll-history-container {
-    position: fixed;
+    position: absolute;
     bottom: 20px;
     left: 20px;
     z-index: 1000;
+
+    @media screen and (max-width: 1000px) {
+        bottom: 50px;
+        left: 10px;
+    }
 }
 
 .roll-history-collapsed {

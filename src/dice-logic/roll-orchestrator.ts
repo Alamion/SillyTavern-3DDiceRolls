@@ -1,5 +1,5 @@
 import { parseDiceNotation } from './dice-parser';
-import { notifyRollResult as notifyBaseRollResult, onRollResult as onBaseRollResult, rollDices } from './dice-roller';
+import { rollDices } from './dice-roller';
 import { DiceFactory } from './renderer';
 import type { DiceGroup, DiceGroupResult, DiceRoll, RollResult } from './types';
 import { debug, warn } from '../utils/logging';
@@ -232,23 +232,15 @@ export async function executeUnifiedRoll(
     };
 
     try {
-        const result = await executeMixedRoll(notation, defaultConfig);
-        notifyBaseRollResult(result);
-        return result;
+        return await executeMixedRoll(notation, defaultConfig);
     } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         warn('Mixed roll failed, falling back to 2D:', errMsg);
-        const result = rollDices(notation);
-        notifyBaseRollResult(result);
-        return result;
+        return rollDices(notation);
     }
 }
 
 export function execute2DRoll(notation: string): RollResult {
     debug('Executing 2D roll:', notation);
-    const result = rollDices(notation);
-    notifyBaseRollResult(result);
-    return result;
+    return rollDices(notation);
 }
-
-export { onBaseRollResult as onRollResult };

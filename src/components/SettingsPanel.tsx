@@ -103,7 +103,7 @@ export default function SettingsPanel(): JSX.Element {
             <div className="inline-drawer">
                 <div className="inline-drawer-toggle inline-drawer-header">
                     <b>3D Dice Rolls</b>
-                    <div className="inline-drawer-icon fa-solid interactable up fa-circle-chevron-up" tabIndex={0}></div>
+                    <div className="inline-drawer-icon fa-solid interactable down fa-circle-chevron-down" tabIndex={0}></div>
                 </div>
                 <div className="inline-drawer-content">
                     {settingKeys.map((key) => (

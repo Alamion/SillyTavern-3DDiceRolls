@@ -1,6 +1,6 @@
 import { debug, error, warn } from './logging';
-import { getContext, getRollConfig, getSettings } from './settings';
-import { execute2DRoll, executeUnifiedRoll } from '../dice-logic';
+import { getContext, getSettings } from './settings';
+import { handleRollEvent } from './events';
 
 export function registerFunctionTools(): void {
     try {
@@ -56,14 +56,11 @@ export function registerFunctionTools(): void {
                 debug('Executing function tool roll:', args);
                 const formula = (args?.formula as string) || '1d6';
                 const who = args?.who as string | undefined;
-                const settings = getSettings();
 
                 try {
-                    let result;
-                    if (settings.enable3dDice) {
-                        result = await executeUnifiedRoll(formula, getRollConfig());
-                    } else {
-                        result = execute2DRoll(formula);
+                    const result = await handleRollEvent({ notation: formula });
+                    if (!result) {
+                        return `Failed to roll formula: ${formula}. Invalid notation.`;
                     }
 
                     const allKeptRolls = result.diceGroups.flatMap(g => g.keptRolls);

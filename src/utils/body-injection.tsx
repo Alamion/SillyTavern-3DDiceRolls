@@ -1,10 +1,11 @@
 import ReactDOM from 'react-dom/client';
 import { getContext, getSettings } from './settings';
-import { executeRoll, type RollResult } from './commands';
 import DicePool from '../components/DicePool';
 import RollHistory from '../components/RollHistory';
-import { debug, warn, error } from './logging';
-import { onRollResult } from '../dice-logic';
+import { debug, error, warn } from './logging';
+import { formatResultForDisplay, onRollResult, RollResult } from '../dice-logic';
+import { handleRollEvent } from './events';
+import SettingsPanel from '../components/SettingsPanel';
 
 const DICE_ROLL_HISTORY_KEY = '3d_dice_rolls';
 
@@ -19,11 +20,28 @@ let chatChangeUnsubscribe: (() => void) | null = null;
 export function initBodyUI(): void {
     debug('Initializing body UI components');
     loadRollHistoryFromChat();
+    createSettingsUI();
     createDiceButtons();
     createRollHistory();
-    setupRollListener();
+    setupRollListeners();
     setupChatChangeListener();
     startSettingsWatcher();
+}
+
+function setupRollListeners(): void {
+    onRollResult(updateRollHistory);
+    onRollResult((result) => {
+        const settings = getSettings();
+
+        debug(result.formatted);
+
+        if (settings.injectResult) {
+            injectResult(result);
+        }
+        if (settings.sendAsChatMessage) {
+            sendAsChatMessage(result);
+        }
+    });
 }
 
 function loadRollHistoryFromChat(): void {
@@ -106,7 +124,7 @@ function startSettingsWatcher(): void {
                     diceButtonsRoot.render(
                         <DicePool
                             onRoll={(notation) => {
-                                executeRoll(notation);
+                                handleRollEvent({ notation });
                             }}
                         />,
                     );
@@ -160,6 +178,20 @@ export function destroyBodyUI(): void {
     rollHistoryContainer = null;
 }
 
+function createSettingsUI(): void {
+    const rootContainer = document.getElementById('extensions_settings');
+    if (rootContainer) {
+        const rootElement = document.createElement('div');
+        rootElement.id = '3d-dice-rolls-settings';
+        rootContainer.appendChild(rootElement);
+
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(
+            <SettingsPanel />,
+        );
+    }
+}
+
 function createDiceButtons(): void {
     const settings = getSettings();
     if (!settings.showDiceButtons) {
@@ -179,7 +211,7 @@ function createDiceButtons(): void {
         diceButtonsRoot.render(
             <DicePool
                 onRoll={(notation) => {
-                    executeRoll(notation);
+                    handleRollEvent({ notation });
                 }}
             />,
         );
@@ -226,17 +258,27 @@ async function clearHistory(): Promise<void> {
     }
 }
 
-function setupRollListener(): void {
-    onRollResult(async (result: RollResult) => {
-        rollHistory = [result, ...rollHistory].slice(0, 50);
-        await saveRollHistoryToChat();
-        if (rollHistoryRoot) {
-            rollHistoryRoot.render(
-                <RollHistory
-                    rolls={rollHistory}
-                    onClear={clearHistory}
-                />,
-            );
-        }
-    });
+async function updateRollHistory(result: RollResult): Promise<void> {
+    rollHistory = [result, ...rollHistory].slice(0, 50);
+    await saveRollHistoryToChat();
+    if (rollHistoryRoot) {
+        rollHistoryRoot.render(
+            <RollHistory
+                rolls={rollHistory}
+                onClear={clearHistory}
+            />,
+        );
+    }
+}
+
+function injectResult(result: RollResult): void {
+    const $user_input = $('#send_textarea');
+    const userInput = String($user_input.val());
+    const newValue = userInput ? `${userInput}\n${result.formatted}` : result.formatted;
+    $user_input.val(newValue)[0].dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function sendAsChatMessage(result: RollResult): void {
+    const context = getContext();
+    context.sendSystemMessage('generic', formatResultForDisplay(result, 'compact'));
 }

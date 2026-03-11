@@ -4,10 +4,10 @@ export const MODULE_NAME = '3DDiceRolls';
 
 export const DEFAULT_SETTINGS: DiceRollerSettings = {
     enable3dDice: true,
-    injectResult: true,
+    injectResult: false,
     sendAsChatMessage: false,
-    showDiceButtons: false,
-    showRollHistory: false,
+    showDiceButtons: true,
+    showRollHistory: true,
     functionTool: false,
     primaryDiceColor: '#7e7e7e',
     secondaryDiceColor: '#ffffff',

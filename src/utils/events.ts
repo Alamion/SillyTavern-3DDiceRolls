@@ -5,7 +5,7 @@ import {
     execute2DRoll,
 } from '../dice-logic';
 import type { RollResult } from '../dice-logic';
-import { notifyRollResult } from './commands';
+import { notifyRollResult } from '../dice-logic';
 
 export const DICE_ROLL_EVENT_NAME = '3ddicerolls:roll';
 
@@ -13,7 +13,7 @@ export interface DiceRollEventPayload {
     notation: string;
 }
 
-async function handleRollEvent(payload: DiceRollEventPayload): Promise<RollResult | null> {
+export async function handleRollEvent(payload: DiceRollEventPayload): Promise<RollResult | null> {
     const { notation } = payload;
 
     if (!notation) {
