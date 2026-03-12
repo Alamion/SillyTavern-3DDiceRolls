@@ -16,24 +16,24 @@ This file contains the actual exports from SillyTavern's getContext() method, in
 
 ### Build
 ```bash
-npm run build
+pnpm run build
 ```
 Builds the extension to `dist/index.js` using webpack in production mode with minification.
 
 ### Install Dependencies
 ```bash
-npm install
+pnpm install
 ```
 Installs all dependencies defined in `package.json`.
 
 ### Development
-- Run `npm run dev` to start a watcher.
+- Run `pnpm run dev` to start a watcher.
 
 ### Linting
 ESLint 9 with TypeScript support. Run via:
 ```bash
-npm run lint
-npm run lint:fix
+pnpm run lint
+pnpm run lint:fix
 ```
 
 ## Code Style Guidelines
