@@ -1,12 +1,12 @@
 @use 'variables' as *;
 
-.dice-pool-collapsed {
+.ddr-dice-pool-collapsed {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.dice-pool-toggle {
+.ddr-dice-pool-toggle {
 
     &:hover {
         background-color: var(--SmartThemeEmColor);
@@ -18,7 +18,7 @@
     }
 }
 
-.dice-pool-container {
+.ddr-dice-pool-container {
     display: flex;
     flex-direction: column;
     gap: $spacing-xl;
@@ -31,7 +31,7 @@
     max-width: $container-max-width;
 }
 
-.dice-pool-header {
+.ddr-dice-pool-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -39,13 +39,13 @@
     border-bottom: 1px solid var(--SmartThemeBorderColor);
 }
 
-.dice-pool-title {
+.ddr-dice-pool-title {
     font-size: $font-size-lg;
     font-weight: bold;
     color: var(--SmartThemeBodyColor);
 }
 
-.dice-pool-count {
+.ddr-dice-pool-count {
     font-size: $font-size-sm;
     padding: $spacing-xs $spacing-md;
     background: var(--SmartThemeEmColor);
@@ -53,14 +53,14 @@
     color: var(--SmartThemeBodyColor);
 }
 
-.dice-pool-dice {
+.ddr-dice-pool-dice {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: $spacing-lg;
     justify-items: center;
 }
 
-.dice-pool-item {
+.ddr-dice-pool-item {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -82,10 +82,9 @@
     }
 }
 
-.dice-pool-preview {
+.ddr-dice-pool-preview {
     padding: $spacing-md $spacing-xl;
     background: var(--SmartThemeChatTintColor);
-    background-opacity: 0.3;
     border-radius: $border-radius-sm;
     font-size: $font-size-md;
     color: var(--SmartThemeBodyColor);
@@ -98,7 +97,7 @@
     backdrop-filter: blur(5px);
 }
 
-.dice-pool-actions {
+.ddr-dice-pool-actions {
     display: flex;
     gap: $spacing-md;
     justify-content: space-between;
@@ -106,7 +105,7 @@
     border-top: 1px solid var(--SmartThemeBorderColor);
 }
 
-.dice-pool-btn {
+.ddr-dice-pool-btn {
     padding: $spacing-md $spacing-xl;
     font-size: $font-size-md;
     font-weight: 600;
@@ -131,18 +130,18 @@
     }
 }
 
-.dice-pool-btn-close {
+.ddr-dice-pool-btn-close {
     background: transparent;
     padding: $spacing-md $spacing-xl;
     font-size: $font-size-lg;
 }
 
-.dice-pool-btn-clear {
+.ddr-dice-pool-btn-clear {
     background: var(--SmartThemeBlurTintColor);
     flex: 1;
 }
 
-.dice-pool-btn-roll {
+.ddr-dice-pool-btn-roll {
     background: color-mix(in srgb, var(--SmartThemeQuoteColor), transparent 20%);
     flex: 2;
 }

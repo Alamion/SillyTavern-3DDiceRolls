@@ -2,6 +2,7 @@ export { DiceRenderer, type DiceRendererConfig, type RollCompleteCallback } from
 export { SceneManager } from './scene';
 export { PhysicsWorld } from './physics';
 export {
+    D2Dice,
     D4Dice,
     D6Dice,
     D8Dice,
@@ -12,6 +13,7 @@ export {
     type DiceShape,
 } from './shapes';
 export {
+    D2DiceGeometry,
     D4DiceGeometry,
     D6DiceGeometry,
     D8DiceGeometry,

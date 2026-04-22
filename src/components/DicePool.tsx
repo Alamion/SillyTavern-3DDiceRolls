@@ -78,9 +78,9 @@ export default function DicePool({
 
     if (!isExpanded) {
         return (
-            <div className="dice-pool-collapsed">
+            <div className="ddr-dice-pool-collapsed">
                 <button
-                    className="dice-pool-toggle ui-toggle"
+                    className="ddr-dice-pool-toggle ddr-ui-toggle"
                     onClick={() => setIsExpanded(true)}
                     title="Open dice pool"
                     type="button"
@@ -96,11 +96,11 @@ export default function DicePool({
     }
 
     return (
-        <div className="dice-pool-container">
-            <div className="dice-pool-header">
-                <span className="dice-pool-title">Dice Pool</span>
+        <div className="ddr-dice-pool-container">
+            <div className="ddr-dice-pool-header">
+                <span className="ddr-dice-pool-title">Dice Pool</span>
                 <button
-                    className="dice-pool-btn dice-pool-btn-close"
+                    className="ddr-dice-pool-btn ddr-dice-pool-btn-close"
                     onClick={closePool}
                     title="Close dice pool"
                     type="button"
@@ -109,11 +109,11 @@ export default function DicePool({
                 </button>
             </div>
 
-            <div className="dice-pool-dice">
+            <div className="ddr-dice-pool-dice">
                 {quickDice.map(({ notation, Component, label }) => (
                     <button
                         key={notation}
-                        className="dice-pool-item"
+                        className="ddr-dice-pool-item"
                         onClick={() => addToPool(notation)}
                         title={`Add ${notation} to pool`}
                         type="button"
@@ -129,14 +129,14 @@ export default function DicePool({
             </div>
 
             {dicePool.length > 0 && (
-                <div className="dice-pool-preview">
+                <div className="ddr-dice-pool-preview">
                     {formatDicePool(dicePool)}
                 </div>
             )}
 
-            <div className="dice-pool-actions">
+            <div className="ddr-dice-pool-actions">
                 <button
-                    className="dice-pool-btn dice-pool-btn-clear"
+                    className="ddr-dice-pool-btn ddr-dice-pool-btn-clear"
                     onClick={clearPool}
                     disabled={dicePool.length === 0}
                     title="Clear pool"
@@ -145,7 +145,7 @@ export default function DicePool({
                     Clear
                 </button>
                 <button
-                    className="dice-pool-btn dice-pool-btn-roll"
+                    className="ddr-dice-pool-btn ddr-dice-pool-btn-roll"
                     onClick={rollPool}
                     disabled={dicePool.length === 0}
                     title="Roll dice pool"

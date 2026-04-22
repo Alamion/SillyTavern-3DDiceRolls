@@ -1,6 +1,6 @@
 @use 'variables' as *;
 
-#dices-container {
+#ddr-dices-container {
     position: absolute;
     top: 20px;
     left: 20px;
@@ -12,13 +12,13 @@
     }
 }
 
-.dice-buttons-wrapper {
+.ddr-dice-buttons-wrapper {
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
 }
 
-.dice-button {
+.ddr-dice-button {
     display: flex;
     align-items: center;
     gap: $spacing-xl;
@@ -45,8 +45,16 @@
     }
 }
 
-.dice-button-label {
+.ddr-dice-button-label {
     font-size: $font-size-base;
     font-weight: bold;
     color: var(--SmartThemeBodyColor);
+}
+
+.ddr-dice-renderer-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 9999;
 }

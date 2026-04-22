@@ -1,7 +1,7 @@
 import { ResourceTracker } from './resource';
 import { SceneManager } from './scene';
 import { PhysicsWorld } from './physics';
-import type { DiceShape } from './shapes';
+import { D2Dice, DiceShape } from './shapes';
 import type { DiceGeometryData } from './geometries';
 import {
     D4Dice,
@@ -51,7 +51,7 @@ export class DiceRenderer {
     ) {
         debug('DiceRenderer: Creating renderer with dimensions', width, height);
         this.container = document.createElement('div');
-        this.container.className = 'dice-renderer-container';
+        this.container.className = 'ddr-dice-renderer-container';
         this.container.style.cssText = `
             position: fixed;
             top: 0;
@@ -113,6 +113,14 @@ export class DiceRenderer {
             let dice: DiceShape;
 
             switch (sides) {
+                case 2:
+                    dice = new D2Dice(
+                        this.width,
+                        this.height,
+                        data,
+                        vector,
+                    );
+                    break;
                 case 4:
                     dice = new D4Dice(
                         this.width,

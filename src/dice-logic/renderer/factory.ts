@@ -7,7 +7,7 @@ import {
     D12DiceGeometry,
     D20DiceGeometry,
     D100DiceGeometry,
-    type DiceGeometryData,
+    type DiceGeometryData, D2DiceGeometry,
 } from './geometries';
 import { DiceRenderer, type DiceRendererConfig } from './renderer';
 import { debug } from '../../utils/logging';
@@ -153,6 +153,16 @@ export class DiceFactory {
         let geom: DiceGeometryData | null = null;
 
         switch (sides) {
+            case 2: {
+                const g = new D2DiceGeometry(
+                    this.width,
+                    this.height,
+                    options,
+                    this.config.scaler,
+                );
+                geom = g.create().clone();
+                break;
+            }
             case 4: {
                 const g = new D4DiceGeometry(
                     this.width,

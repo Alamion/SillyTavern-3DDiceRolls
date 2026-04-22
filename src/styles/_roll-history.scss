@@ -1,6 +1,6 @@
 @use 'variables' as *;
 
-#roll-history-container {
+#ddr-roll-history-container {
     position: absolute;
     bottom: 20px;
     left: 20px;
@@ -12,13 +12,13 @@
     }
 }
 
-.roll-history-collapsed {
+.ddr-roll-history-collapsed {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.roll-history-toggle {
+.ddr-roll-history-toggle {
     position: relative;
 
     &:hover {
@@ -31,11 +31,11 @@
     }
 }
 
-.roll-history-icon {
+.ddr-roll-history-icon {
     font-size: $font-size-xl;
 }
 
-.roll-history-badge {
+.ddr-roll-history-badge {
     position: absolute;
     top: -4px;
     right: -4px;
@@ -49,7 +49,7 @@
     text-align: center;
 }
 
-.roll-history-container {
+.ddr-roll-history-container {
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
@@ -62,7 +62,7 @@
     max-width: $container-max-width;
 }
 
-.roll-history-header {
+.ddr-roll-history-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -70,13 +70,13 @@
     border-top: 1px solid var(--SmartThemeBorderColor);
 }
 
-.roll-history-title {
+.ddr-roll-history-title {
     font-size: $font-size-lg;
     font-weight: bold;
     color: var(--SmartThemeBodyColor);
 }
 
-.roll-history-content {
+.ddr-roll-history-content {
     display: flex;
     flex-direction: column-reverse;
     gap: $spacing-sm;
@@ -84,7 +84,7 @@
     overflow-y: auto;
 }
 
-.roll-history-empty {
+.ddr-roll-history-empty {
     padding: 20px;
     text-align: center;
     color: var(--SmartThemeBodyColor);
@@ -92,7 +92,7 @@
     opacity: 0.7;
 }
 
-.roll-history-item {
+.ddr-roll-history-item {
     display: flex;
     flex-direction: row;
     gap: $spacing-xs;
@@ -107,31 +107,31 @@
     }
 }
 
-.roll-history-notation {
+.ddr-roll-history-notation {
     font-weight: bold;
     color: var(--SmartThemeEmColor);
     font-size: $font-size-md;
 }
 
-.roll-history-dice {
+.ddr-roll-history-dice {
     font-size: $font-size-xs;
     color: var(--SmartThemeBodyColor);
     opacity: 0.9;
 }
 
-.roll-history-total {
+.ddr-roll-history-total {
     font-size: $font-size-base;
     font-weight: bold;
     color: var(--SmartThemeBodyColor);
 }
 
-.roll-history-actions {
+.ddr-roll-history-actions {
     display: flex;
     gap: $spacing-md;
     justify-content: space-between;
 }
 
-.roll-history-btn {
+.ddr-roll-history-btn {
     padding: $spacing-sm $spacing-xl;
     font-size: $font-size-sm;
     font-weight: 600;
@@ -157,12 +157,12 @@
     }
 }
 
-.roll-history-btn-clear {
+.ddr-roll-history-btn-clear {
     flex: 0;
     background: var(--SmartThemeBlurTintColor);
 }
 
-.roll-history-btn-close {
+.ddr-roll-history-btn-close {
     background: transparent;
     flex: 0;
     padding: $spacing-sm $spacing-lg;

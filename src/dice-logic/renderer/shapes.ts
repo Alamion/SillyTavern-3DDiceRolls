@@ -486,3 +486,20 @@ export class D4Dice extends DiceShape {
         this.create();
     }
 }
+
+export class D2Dice extends DiceShape {
+    sides = 2;
+    inertia = 3;
+    constructor(
+        public w: number,
+        public h: number,
+        public data: DiceGeometryData,
+        vector?: { x: number; y: number },
+    ) {
+        super(w, h, data);
+        if (vector) {
+            this.vector = this.generateVector(vector);
+        }
+        this.create();
+    }
+}

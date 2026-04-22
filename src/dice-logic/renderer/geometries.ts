@@ -316,19 +316,19 @@ export default abstract class DiceGeometry {
                 );
                 uvs.push(
                     (Math.cos(aa * (j + 1) + this.af) + 1 + this.tab) /
-                        2 /
-                        (1 + this.tab),
+                    2 /
+                    (1 + this.tab),
                     (Math.sin(aa * (j + 1) + this.af) + 1 + this.tab) /
-                        2 /
-                        (1 + this.tab),
+                    2 /
+                    (1 + this.tab),
                 );
                 uvs.push(
                     (Math.cos(aa * (j + 2) + this.af) + 1 + this.tab) /
-                        2 /
-                        (1 + this.tab),
+                    2 /
+                    (1 + this.tab),
                     (Math.sin(aa * (j + 2) + this.af) + 1 + this.tab) /
-                        2 /
-                        (1 + this.tab),
+                    2 /
+                    (1 + this.tab),
                 );
             }
 
@@ -386,7 +386,7 @@ export default abstract class DiceGeometry {
         }
         context.font = `${fontsize}pt '${this.fontFace}'`;
 
-        context.fillStyle =  fixBrightness(this.diceColor, -10);
+        context.fillStyle = fixBrightness(this.diceColor, -10);
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.textAlign = 'center';
         context.textBaseline = 'middle';
@@ -806,6 +806,7 @@ export class D4DiceGeometry extends DiceGeometry {
         }
         return materials;
     }
+
     createTextTexture(index: number) {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d')!;
@@ -831,5 +832,52 @@ export class D4DiceGeometry extends DiceGeometry {
         const texture = new Texture(canvas);
         texture.needsUpdate = true;
         return texture;
+    }
+}
+
+export class D2DiceGeometry extends DiceGeometry {
+    sides = 2;
+    mass = 200;
+    tab = 0;
+    af = 0;
+    chamfer = 0.96;
+    scaleFactor = 1.0;
+    margin = 1.0;
+    values = [0, 1];
+
+    vertices: number[][] = [];
+    faces: number[][] = [];
+
+    constructor(w: number, h: number, options: Partial<DiceOptions> = {}, scaler: number) {
+        super(w, h, options, scaler);
+
+        const sidesCount = 12;
+        const radius = 1.0;
+        const halfHeight = 0.1;
+
+        for (let i = 0; i < sidesCount; i++) {
+            const angle = (i / sidesCount) * Math.PI * 2;
+            this.vertices.push([Math.cos(angle) * radius, Math.sin(angle) * radius, halfHeight]);
+            this.vertices.push([Math.cos(angle) * radius, Math.sin(angle) * radius, -halfHeight]);
+        }
+
+        const topFace = Array.from({ length: sidesCount }, (_, i) => i * 2);
+        topFace.push(1);
+
+        const bottomFace = Array.from({ length: sidesCount }, (_, i) => i * 2 + 1).reverse();
+        bottomFace.push(2);
+
+        this.faces = [topFace, bottomFace];
+
+        for (let i = 0; i < sidesCount; i++) {
+            const nextI = (i + 1) % sidesCount;
+            this.faces.push([
+                i * 2,
+                i * 2 + 1,
+                nextI * 2 + 1,
+                nextI * 2,
+                -1,
+            ]);
+        }
     }
 }

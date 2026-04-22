@@ -5,7 +5,7 @@ import type { DiceGroup, DiceGroupResult, DiceRoll, RollResult } from './types';
 import { debug, warn } from '../utils/logging';
 import { MixedRollConfig } from '../utils/settings';
 
-const SUPPORTED_3D_SIDES = new Set([4, 6, 8, 10, 12, 20, 100]);
+const SUPPORTED_3D_SIDES = new Set([2, 4, 6, 8, 10, 12, 20, 100]);
 
 function shouldUse3D(diceGroup: DiceGroup): boolean {
     return SUPPORTED_3D_SIDES.has(diceGroup.sides);

@@ -34,9 +34,9 @@ export default function RollHistory({
 
     if (!isExpanded) {
         return (
-            <div className="roll-history-collapsed">
+            <div className="ddr-roll-history-collapsed">
                 <button
-                    className="roll-history-toggle ui-toggle"
+                    className="ddr-roll-history-toggle ddr-ui-toggle"
                     onClick={() => setIsExpanded(true)}
                     title={`Open roll history (${rolls.length} rolls)`}
                     type="button"
@@ -47,7 +47,7 @@ export default function RollHistory({
                         style={{ width: '48px', height: '48px' }}
                     />
                     {rolls.length > 0 && (
-                        <span className="roll-history-badge">{rolls.length}</span>
+                        <span className="ddr-roll-history-badge">{rolls.length}</span>
                     )}
                 </button>
             </div>
@@ -57,24 +57,24 @@ export default function RollHistory({
     const displayRolls = rolls.slice(0, 10);
 
     return (
-        <div className="roll-history-container">
+        <div className="ddr-roll-history-container">
             {displayRolls.length > 0 && (
-                <div className="roll-history-content" ref={contentRef}>
+                <div className="ddr-roll-history-content" ref={contentRef}>
                     {displayRolls.map((roll, idx) => {
                         const isLatest = idx === 0;
                         return (
                             <div
                                 key={`${roll.notation}-${idx}`}
-                                className={`roll-history-item ${isLatest ? 'latest' : ''}`}
+                                className={`ddr-roll-history-item ${isLatest ? 'latest' : ''}`}
                             >
                                 <div>
-                                    <span className="roll-history-notation">{roll.notation}</span>
-                                    <span className="roll-history-total"> = {roll.total}</span>
+                                    <span className="ddr-roll-history-notation">{roll.notation}</span>
+                                    <span className="ddr-roll-history-total"> = {roll.total}</span>
                                 </div>
                                 {isLatest && roll.diceGroups &&
                                 (roll.diceGroups.length > 1 ||
                                     (roll.diceGroups[0]?.rolls && roll.diceGroups[0]?.rolls.length > 1)) && (
-                                    <span className="roll-history-dice">{roll.details}</span>
+                                    <span className="ddr-roll-history-dice">{roll.details}</span>
                                 )}
                             </div>
                         );
@@ -83,15 +83,15 @@ export default function RollHistory({
             )}
 
             {displayRolls.length === 0 && (
-                <div className="roll-history-empty">
+                <div className="ddr-roll-history-empty">
                     No rolls yet
                 </div>
             )}
 
-            <div className="roll-history-header">
+            <div className="ddr-roll-history-header">
 
                 <button
-                    className="roll-history-btn roll-history-btn-clear"
+                    className="ddr-roll-history-btn ddr-roll-history-btn-clear"
                     onClick={clearHistory}
                     disabled={rolls.length === 0}
                     title="Clear history"
@@ -99,9 +99,9 @@ export default function RollHistory({
                 >
                     Clear
                 </button>
-                <span className="roll-history-title">Roll History</span>
+                <span className="ddr-roll-history-title">Roll History</span>
                 <button
-                    className="roll-history-btn roll-history-btn-close"
+                    className="ddr-roll-history-btn ddr-roll-history-btn-close"
                     onClick={closeHistory}
                     title="Close history"
                     type="button"

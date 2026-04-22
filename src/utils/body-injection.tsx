@@ -199,10 +199,10 @@ function createDiceButtons(): void {
     }
 
     diceButtonsContainer = document.createElement('div');
-    diceButtonsContainer.id = 'dices-container';
+    diceButtonsContainer.id = 'ddr-dices-container';
 
     const body = document.body;
-    const existingButtons = document.getElementById('dices-container');
+    const existingButtons = document.getElementById('ddr-dices-container');
     if (!existingButtons && body) {
         body.appendChild(diceButtonsContainer);
 
@@ -226,10 +226,10 @@ function createRollHistory(): void {
     }
 
     rollHistoryContainer = document.createElement('div');
-    rollHistoryContainer.id = 'roll-history-container';
+    rollHistoryContainer.id = 'ddr-roll-history-container';
 
     const body = document.body;
-    const existingHistory = document.getElementById('roll-history-container');
+    const existingHistory = document.getElementById('ddr-roll-history-container');
     if (!existingHistory && body) {
         body.insertBefore(rollHistoryContainer, body.firstChild);
 

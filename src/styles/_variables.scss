@@ -1,18 +1,19 @@
 @use 'sass:color';
 
+// Only for reference, do not uncomment as it will rewrite app's settings.
 :root {
-    --SmartThemeBodyColor: initial;
-    --SmartThemeEmColor: initial;
-    --SmartThemeUnderlineColor: initial;
-    --SmartThemeQuoteColor: initial;
+    //--SmartThemeBodyColor: initial;
+    //--SmartThemeEmColor: initial;
+    //--SmartThemeUnderlineColor: initial;
+    //--SmartThemeQuoteColor: initial;
     //--SmartThemeFastUIBGColor: initial;
-    --SmartThemeBlurTintColor: initial;
-    --SmartThemeChatTintColor: initial;
-    --SmartThemeUserMesBlurTintColor: initial;
-    --SmartThemeBotMesBlurTintColor: initial;
-    --SmartThemeBlurStrength: initial;
-    --SmartThemeShadowColor: initial;
-    --SmartThemeBorderColor: initial;
+    //--SmartThemeBlurTintColor: initial;
+    //--SmartThemeChatTintColor: initial;
+    //--SmartThemeUserMesBlurTintColor: initial;
+    //--SmartThemeBotMesBlurTintColor: initial;
+    //--SmartThemeBlurStrength: initial;
+    //--SmartThemeShadowColor: initial;
+    //--SmartThemeBorderColor: initial;
 }
 
 $transition-fast: all 0.15s ease;

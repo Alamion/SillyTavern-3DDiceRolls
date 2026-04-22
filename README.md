@@ -49,7 +49,7 @@ Supports [dice notation](https://dice-roller.github.io/documentation/guide/notat
 
 ![command.png](docs/attachments/command.png)
 
-### UI Buttons
+### Dice Pool
 
 ![ui_buttons.png](docs/attachments/ui_buttons.png)
 
