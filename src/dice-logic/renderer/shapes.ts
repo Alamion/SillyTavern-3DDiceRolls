@@ -1,13 +1,17 @@
-import { Body, Mat3, Quaternion, Vec3 } from 'cannon-es';
+import { Body, Vec3 } from 'cannon-es';
 import {
     BufferGeometry,
     Vector3,
     type Mesh,
     type Material,
-    type Quaternion as ThreeQuaternion,
+    Quaternion as ThreeQuaternion,
 } from 'three';
 import type { DiceGeometryData } from './geometries';
 import { debug } from '../../utils/logging';
+
+function cannonQuaternionToThree(cannonQuat: { x: number; y: number; z: number; w: number }): ThreeQuaternion {
+    return new ThreeQuaternion(cannonQuat.x, cannonQuat.y, cannonQuat.z, cannonQuat.w);
+}
 
 interface DiceVector {
     pos: { x: number; y: number; z: number }
@@ -16,34 +20,35 @@ interface DiceVector {
     axis: { x: number; y: number; z: number; w: number }
 }
 
-export const DEFAULT_VECTOR = {
-    pos: {
-        x: 100 * Math.random(),
-        y: 100 * Math.random(),
-        z: 250,
-    },
-    velocity: {
-        x: 600 * (Math.random() * 2 + 1),
-        y: 750 * (Math.random() * 2 + 1),
-        z: 0,
-    },
-    angular: {
-        x: 200 * Math.random(),
-        y: 200 * Math.random(),
-        z: 100 * Math.random(),
-    },
-    axis: {
-        x: Math.random(),
-        y: Math.random(),
-        z: Math.random(),
-        w: Math.random(),
-    },
-};
+function createDefaultVector(): DiceVector {
+    return {
+        pos: {
+            x: 100 * Math.random(),
+            y: 100 * Math.random(),
+            z: 250,
+        },
+        velocity: {
+            x: 600 * (Math.random() * 2 + 1),
+            y: 750 * (Math.random() * 2 + 1),
+            z: 0,
+        },
+        angular: {
+            x: 200 * Math.random(),
+            y: 200 * Math.random(),
+            z: 100 * Math.random(),
+        },
+        axis: {
+            x: Math.random(),
+            y: Math.random(),
+            z: Math.random(),
+            w: Math.random(),
+        },
+    };
+}
 
 export abstract class DiceShape {
-    scale = 50;
-    abstract sides: number
-    abstract inertia: number
+    sides: number;
+    inertia: number;
     body: Body;
     geometry: Mesh<BufferGeometry, Material | Material[]>;
     values: number[] = [];
@@ -51,17 +56,27 @@ export abstract class DiceShape {
     stopped: boolean | number = false;
     staleIterations = 0;
 
-    vector: DiceVector = { ...DEFAULT_VECTOR };
+    vector!: DiceVector;
 
     constructor(
+        sides: number,
+        inertia: number,
         public w: number,
         public h: number,
         data: DiceGeometryData,
+        vector?: { x: number; y: number },
     ) {
         debug(`DiceShape: Creating dice with ${data.values?.length || 0} sides`);
+        this.sides = sides;
+        this.inertia = inertia;
         this.geometry = data.geometry;
         this.body = data.body;
         this.values = data.values;
+        this.vector = createDefaultVector();
+        if (vector) {
+            this.vector = this.generateVector(vector);
+        }
+        this.create();
     }
 
     generateVector(v: { x: number; y: number }): DiceVector {
@@ -198,14 +213,7 @@ export abstract class DiceShape {
 
             const worldNormal = normal
                 .clone()
-                .applyQuaternion(
-                    new Quaternion(
-                        this.body.quaternion.x,
-                        this.body.quaternion.y,
-                        this.body.quaternion.z,
-                        this.body.quaternion.w,
-                    ) as unknown as ThreeQuaternion,
-                );
+                .applyQuaternion(cannonQuaternionToThree(this.body.quaternion));
 
             if (worldNormal.lengthSq() === 0) {
                 debug(`  Skipping group ${i}: zero-length worldNormal`);
@@ -273,32 +281,6 @@ export abstract class DiceShape {
             `DiceShape: Result calculated - closestMatIndex: ${closestMatIndex}, faceIndex: ${faceIndex}, value: ${result}, closestAngle: ${closestAngle}`,
         );
         return result;
-    }
-
-    resetBody(): this {
-        this.body.vlambda = new Vec3();
-        this.body.position = new Vec3();
-        this.body.previousPosition = new Vec3();
-        this.body.initPosition = new Vec3();
-        this.body.velocity = new Vec3();
-        this.body.initVelocity = new Vec3();
-        this.body.force = new Vec3();
-        this.body.torque = new Vec3();
-        this.body.quaternion = new Quaternion();
-        this.body.initQuaternion = new Quaternion();
-        this.body.angularVelocity = new Vec3();
-        this.body.initAngularVelocity = new Vec3();
-        this.body.interpolatedPosition = new Vec3();
-        this.body.interpolatedQuaternion = new Quaternion();
-        this.body.inertia = new Vec3();
-        this.body.invInertia = new Vec3();
-        this.body.invInertiaWorld = new Mat3();
-        this.body.invInertiaSolve = new Vec3();
-        this.body.invInertiaWorldSolve = new Mat3();
-        this.body.wlambda = new Vec3();
-
-        this.body.updateMassProperties();
-        return this;
     }
 
     set(): void {
@@ -370,136 +352,67 @@ export abstract class DiceShape {
 }
 
 export class D20Dice extends DiceShape {
-    sides = 20;
-    inertia = 6;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(20, 6, w, h, data, vector);
     }
 }
-
 export class D12Dice extends DiceShape {
-    sides = 12;
-    inertia = 8;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(12, 8, w, h, data, vector);
     }
 }
-
 export class D10Dice extends DiceShape {
-    sides = 10;
-    inertia = 9;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(10, 9, w, h, data, vector);
     }
 }
 export class D100Dice extends DiceShape {
-    sides = 10;
-    inertia = 9;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(10, 9, w, h, data, vector);
     }
 }
-
 export class D8Dice extends DiceShape {
-    sides = 8;
-    inertia = 10;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(8, 10, w, h, data, vector);
     }
 }
-
 export class D6Dice extends DiceShape {
-    sides = 6;
-    inertia = 13;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(6, 13, w, h, data, vector);
     }
 }
-
 export class D4Dice extends DiceShape {
-    sides = 4;
-    inertia = 5;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(4, 5, w, h, data, vector);
+    }
+}
+export class D2Dice extends DiceShape {
+    constructor(w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) {
+        super(2, 3, w, h, data, vector);
     }
 }
 
-export class D2Dice extends DiceShape {
-    sides = 2;
-    inertia = 3;
-    constructor(
-        public w: number,
-        public h: number,
-        public data: DiceGeometryData,
-        vector?: { x: number; y: number },
-    ) {
-        super(w, h, data);
-        if (vector) {
-            this.vector = this.generateVector(vector);
-        }
-        this.create();
+const DICE_CLASSES: Record<number, new (w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) => DiceShape> = {
+    2: D2Dice,
+    4: D4Dice,
+    6: D6Dice,
+    8: D8Dice,
+    10: D10Dice,
+    12: D12Dice,
+    20: D20Dice,
+    100: D100Dice,
+};
+
+export function createDiceShape(
+    sides: number,
+    w: number,
+    h: number,
+    data: DiceGeometryData,
+    vector?: { x: number; y: number },
+): DiceShape {
+    const DiceClass = DICE_CLASSES[sides];
+    if (!DiceClass) {
+        throw new Error(`Unsupported dice sides: ${sides}`);
     }
+    return new DiceClass(w, h, data, vector);
 }

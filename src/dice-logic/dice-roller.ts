@@ -1,5 +1,6 @@
 import { parseDiceNotation } from './dice-parser';
-import type { DiceGroup, DiceRoll, DiceGroupResult, FullRollResult, DiceModifiers, RollResult } from './types';
+import type { DiceGroup, DiceRoll, DiceGroupResult, FullRollResult, RollResult } from './types';
+import { formatModifiers, applyKeepDrop, formatRollValues } from './utils';
 
 function rollSingleDie(sides: number): number {
     const randomBuffer = new Uint32Array(1);
@@ -41,34 +42,6 @@ function applyExplode(
     }
 
     return { rolls: result, explosions };
-}
-
-function applyKeepDrop(rolls: DiceRoll[], modifiers: DiceModifiers): DiceRoll[] {
-    if (modifiers.keepHighest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => b.roll.value - a.roll.value);
-        const keepIndices = new Set(sorted.slice(0, modifiers.keepHighest).map(s => s.idx));
-        return rolls.map((r, idx) => ({ ...r, dropped: !keepIndices.has(idx) }));
-    }
-
-    if (modifiers.keepLowest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => a.roll.value - b.roll.value);
-        const keepIndices = new Set(sorted.slice(0, modifiers.keepLowest).map(s => s.idx));
-        return rolls.map((r, idx) => ({ ...r, dropped: !keepIndices.has(idx) }));
-    }
-
-    if (modifiers.dropHighest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => b.roll.value - a.roll.value);
-        const dropIndices = new Set(sorted.slice(0, modifiers.dropHighest).map(s => s.idx));
-        return rolls.map((r, idx) => ({ ...r, dropped: dropIndices.has(idx) }));
-    }
-
-    if (modifiers.dropLowest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => a.roll.value - b.roll.value);
-        const dropIndices = new Set(sorted.slice(0, modifiers.dropLowest).map(s => s.idx));
-        return rolls.map((r, idx) => ({ ...r, dropped: dropIndices.has(idx) }));
-    }
-
-    return rolls;
 }
 
 function rollDiceGroup(dice: DiceGroup, operation: '+' | '-'): DiceGroupResult {
@@ -127,38 +100,12 @@ function rollDiceGroup(dice: DiceGroup, operation: '+' | '-'): DiceGroupResult {
     };
 }
 
-function formatModifiers(modifiers: DiceModifiers): string {
-    const parts: string[] = [];
-    if (modifiers.keepHighest) parts.push(`kh${modifiers.keepHighest}`);
-    if (modifiers.keepLowest) parts.push(`kl${modifiers.keepLowest}`);
-    if (modifiers.dropHighest) parts.push(`dh${modifiers.dropHighest}`);
-    if (modifiers.dropLowest) parts.push(`dl${modifiers.dropLowest}`);
-    if (modifiers.reroll) parts.push(`r${modifiers.reroll}`);
-    if (modifiers.explode) parts.push(modifiers.explode === 1 ? '!' : `!${modifiers.explode}`);
-    if (modifiers.sort) parts.push(modifiers.sort === 'asc' ? 'u' : 's');
-    return parts.join('');
-}
-
 function formatDiceGroup(group: DiceGroupResult): string {
     if (group.rolls.length === 0) {
         return '(0)';
     }
 
-    const formattedRolls = group.rolls.map(r => {
-        let s = String(r.value);
-        if (r.dropped) {
-            s = `~~${s}~~`;
-        } else if (r.exploded) {
-            s = `${s}!`;
-        }
-        return s;
-    });
-
-    if (group.rolls.length === 1) {
-        return `(${formattedRolls[0]})`;
-    }
-
-    return `(${formattedRolls.join(' + ')})`;
+    return `(${formatRollValues(group.rolls)})`;
 }
 
 function executeRollInternal(notation: string): FullRollResult {
@@ -167,11 +114,10 @@ function executeRollInternal(notation: string): FullRollResult {
 
     for (const expr of parsed.expressions) {
         if (expr.type === 'dice') {
-            const diceGroup = rollDiceGroup(expr.value as DiceGroup, expr.operation);
+            const diceGroup = rollDiceGroup(expr.value, expr.operation);
             diceGroups.push(diceGroup);
         } else {
-            const numValue = expr.value as number;
-            const value = expr.operation === '-' ? -numValue : numValue;
+            const value = expr.operation === '-' ? -expr.value : expr.value;
             diceGroups.push({
                 notation: String(value),
                 sides: 0,

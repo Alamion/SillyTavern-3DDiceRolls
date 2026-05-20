@@ -10,7 +10,7 @@ interface DiceDUnknownProps {
     onClick?: () => void;
 }
 
-export default function DiceDUnknown({
+export default function DiceD2({
     primaryColor,
     secondaryColor,
     value,
@@ -36,5 +36,5 @@ export default function DiceDUnknown({
   </svg>
   `.trim();
 
-    return <SvgImage svgString={svgContent} mode={mode} style={style} className={className} onClick={onClick} alt="DiceDUnknown" />;
+    return <SvgImage svgString={svgContent} mode={mode} style={style} className={className} onClick={onClick} alt="DiceD2" />;
 }

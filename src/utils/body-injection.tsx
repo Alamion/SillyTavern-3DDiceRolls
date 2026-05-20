@@ -1,11 +1,12 @@
 import ReactDOM from 'react-dom/client';
-import { getContext, getSettings } from './settings';
+import { getContext, getSettings, subscribeSettings } from './settings';
 import DicePool from '../components/DicePool';
 import RollHistory from '../components/RollHistory';
 import { debug, error, warn } from './logging';
 import { formatResultForDisplay, onRollResult, RollResult } from '../dice-logic';
 import { handleRollEvent } from './events';
 import SettingsPanel from '../components/SettingsPanel';
+import { clearTextureCache } from '../dice-logic/renderer';
 
 const DICE_ROLL_HISTORY_KEY = '3d_dice_rolls';
 
@@ -16,6 +17,7 @@ let settingsCheckInterval: ReturnType<typeof setInterval> | null = null;
 let diceButtonsRoot: ReactDOM.Root | null = null;
 let rollHistoryRoot: ReactDOM.Root | null = null;
 let chatChangeUnsubscribe: (() => void) | null = null;
+let unsubscribeSettings: (() => void) | null = null;
 
 export function initBodyUI(): void {
     debug('Initializing body UI components');
@@ -47,6 +49,10 @@ function setupRollListeners(): void {
 function loadRollHistoryFromChat(): void {
     try {
         const context = getContext();
+        if (!context) {
+            rollHistory = [];
+            return;
+        }
         const chatMetadata = context.chatMetadata || {};
         const savedRolls = chatMetadata[DICE_ROLL_HISTORY_KEY];
 
@@ -62,24 +68,39 @@ function loadRollHistoryFromChat(): void {
     }
 }
 
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
 async function saveRollHistoryToChat(): Promise<void> {
-    try {
-        const context = getContext();
-        if (!context.chatMetadata.chat_id_hash) {
-            debug('Cannot save roll history to chat as no chat is open');
-            return;
-        }
-        context.chatMetadata[DICE_ROLL_HISTORY_KEY] = rollHistory.slice(0, 50);
-        await context.saveMetadata();
-        debug('Saved roll history to chat:', rollHistory.length, 'rolls');
-    } catch (err) {
-        error('Failed to save roll history to chat', 'Roll History', [err]);
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
     }
+    saveTimeout = setTimeout(async () => {
+        try {
+            const context = getContext();
+            if (!context) {
+                debug('Cannot save roll history to chat as context is unavailable');
+                return;
+            }
+            if (!context.chatMetadata.chat_id_hash) {
+                debug('Cannot save roll history to chat as no chat is open');
+                return;
+            }
+            context.chatMetadata[DICE_ROLL_HISTORY_KEY] = rollHistory.slice(0, 50);
+            await context.saveMetadata();
+            debug('Saved roll history to chat:', rollHistory.length, 'rolls');
+        } catch (err) {
+            error('Failed to save roll history to chat', 'Roll History', [err]);
+        }
+    }, 500);
 }
 
 function setupChatChangeListener(): void {
     try {
         const context = getContext();
+        if (!context) {
+            error('Cannot setup chat listener - context unavailable', 'Event Listener');
+            return;
+        }
         const handleChatChange = () => {
             debug('Chat changed, reloading roll history');
             loadRollHistoryFromChat();
@@ -103,61 +124,56 @@ function setupChatChangeListener(): void {
 }
 
 function startSettingsWatcher(): void {
-    let lastSettings = JSON.stringify(getSettings());
     let lastPrimaryColor = getSettings().primaryDiceColor;
     let lastSecondaryColor = getSettings().secondaryDiceColor;
-    let lastShowDiceButtons = getSettings().showDiceButtons;
 
-    settingsCheckInterval = setInterval(() => {
-        const currentSettings = getSettings();
-        const currentSettingsStr = JSON.stringify(currentSettings);
-        if (currentSettingsStr !== lastSettings) {
-            lastSettings = currentSettingsStr;
+    unsubscribeSettings = subscribeSettings((currentSettings) => {
+        const primaryChanged = currentSettings.primaryDiceColor !== lastPrimaryColor;
+        const secondaryChanged = currentSettings.secondaryDiceColor !== lastSecondaryColor;
 
-            // Check if primary color changed
-            if (currentSettings.primaryDiceColor !== lastPrimaryColor || currentSettings.secondaryDiceColor !== lastSecondaryColor) {
-                lastPrimaryColor = currentSettings.primaryDiceColor;
-                lastSecondaryColor = currentSettings.secondaryDiceColor;
-                debug('Colors changed to:', currentSettings.primaryDiceColor, currentSettings.secondaryDiceColor);
-                // Rerender dice buttons with new color
-                if (diceButtonsContainer && diceButtonsRoot) {
-                    diceButtonsRoot.render(
-                        <DicePool
-                            onRoll={(notation) => {
-                                handleRollEvent({ notation });
-                            }}
-                        />,
-                    );
-                }
-                if (rollHistoryRoot) {
-                    rollHistoryRoot.render(
-                        <RollHistory
-                            rolls={rollHistory}
-                            onClear={clearHistory}
-                        />,
-                    );
-                }
+        if (primaryChanged) {
+            lastPrimaryColor = currentSettings.primaryDiceColor;
+            debug('Primary color changed to:', currentSettings.primaryDiceColor);
+        }
+        if (secondaryChanged) {
+            lastSecondaryColor = currentSettings.secondaryDiceColor;
+            debug('Secondary color changed to:', currentSettings.secondaryDiceColor);
+        }
+
+        if (primaryChanged || secondaryChanged) {
+            clearTextureCache();
+
+            if (diceButtonsRoot) {
+                diceButtonsRoot.render(
+                    <DicePool
+                        onRoll={(notation) => {
+                            handleRollEvent({ notation });
+                        }}
+                    />,
+                );
             }
-
-            // Update dice buttons visibility
-            if (currentSettings.showDiceButtons !== lastShowDiceButtons) {
-                lastShowDiceButtons = currentSettings.showDiceButtons;
-                debug('Dice buttons visibility changed:', currentSettings.showDiceButtons);
-                if (diceButtonsContainer) {
-                    diceButtonsContainer.style.display = currentSettings.showDiceButtons ? '' : 'none';
-                } else if (currentSettings.showDiceButtons) {
-                    createDiceButtons();
-                }
-            }
-
-            // Update roll history visibility
-            if (rollHistoryContainer) {
-                rollHistoryContainer.style.display = currentSettings.showRollHistory ? '' : 'none';
-            } else if (currentSettings.showRollHistory) {
-                createRollHistory();
+            if (rollHistoryRoot) {
+                rollHistoryRoot.render(
+                    <RollHistory
+                        rolls={rollHistory}
+                        onClear={clearHistory}
+                    />,
+                );
             }
         }
-    }, 500);
+
+        if (diceButtonsContainer) {
+            diceButtonsContainer.style.display = currentSettings.showDiceButtons ? '' : 'none';
+        } else if (currentSettings.showDiceButtons) {
+            createDiceButtons();
+        }
+
+        if (rollHistoryContainer) {
+            rollHistoryContainer.style.display = currentSettings.showRollHistory ? '' : 'none';
+        } else if (currentSettings.showRollHistory) {
+            createRollHistory();
+        }
+    });
 }
 
 export function destroyBodyUI(): void {
@@ -168,6 +184,8 @@ export function destroyBodyUI(): void {
     }
     chatChangeUnsubscribe?.();
     chatChangeUnsubscribe = null;
+    unsubscribeSettings?.();
+    unsubscribeSettings = null;
     diceButtonsRoot?.unmount();
     diceButtonsRoot = null;
     rollHistoryRoot?.unmount();
@@ -206,7 +224,6 @@ function createDiceButtons(): void {
     if (!existingButtons && body) {
         body.appendChild(diceButtonsContainer);
 
-        // Mount React component
         diceButtonsRoot = ReactDOM.createRoot(diceButtonsContainer);
         diceButtonsRoot.render(
             <DicePool
@@ -280,5 +297,8 @@ function injectResult(result: RollResult): void {
 
 function sendAsChatMessage(result: RollResult): void {
     const context = getContext();
+    if (!context) {
+        return;
+    }
     context.sendSystemMessage('generic', formatResultForDisplay(result, 'compact'));
 }

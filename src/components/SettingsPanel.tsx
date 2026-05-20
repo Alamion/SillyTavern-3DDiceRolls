@@ -1,20 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getSettings, updateSettings, type DiceRollerSettings, getContext } from '../utils/settings';
 import { SETTINGS_METADATA, type SettingType } from '../utils/constants';
 import { registerFunctionTools, unregisterFunctionTools } from '../utils/function-tools';
 
 export default function SettingsPanel(): JSX.Element {
     const [settings, setSettings] = useState<DiceRollerSettings>(getSettings());
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const currentSettings = getSettings();
-            if (JSON.stringify(currentSettings) !== JSON.stringify(settings)) {
-                setSettings(currentSettings);
-            }
-        }, 100);
-        return () => clearInterval(interval);
-    }, [settings]);
 
     const handleChange = (key: keyof DiceRollerSettings, value: boolean | string | number): void => {
         updateSettings({ [key]: value });

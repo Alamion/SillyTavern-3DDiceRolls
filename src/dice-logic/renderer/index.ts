@@ -23,6 +23,7 @@ export {
     D100DiceGeometry,
     type DiceGeometryData,
     default as DiceGeometry,
+    clearTextureCache,
 } from './geometries';
 export { ResourceTracker } from './resource';
 export { DiceFactory, type DiceFactoryConfig, create3DDiceRoll } from './factory';

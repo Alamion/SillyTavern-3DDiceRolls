@@ -6,5 +6,5 @@ export { default as DiceD12 } from './DiceD12';
 export { default as DiceD20 } from './DiceD20';
 export { default as DiceD100 } from './DiceD100';
 export { default as DiceDF } from './DiceDF';
-export { default as DiceDUnknown } from './DiceDUnknown';
+export { default as DiceD2 } from './DiceD2';
 export { SvgImage, useDiceColors } from './utils';

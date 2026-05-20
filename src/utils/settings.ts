@@ -1,3 +1,4 @@
+import type { SillyTavernContext } from '../global.d';
 import { debug, error, warn } from './logging';
 import { DEFAULT_SETTINGS, MODULE_NAME } from './constants';
 import { registerRollCommand } from './commands';
@@ -25,6 +26,7 @@ export function updateSettings(newSettings: Partial<DiceRollerSettings>): void {
     debug('Updating settings:', newSettings);
     currentSettings = { ...currentSettings, ...newSettings };
     saveSettings();
+    notifySubscribers();
 }
 
 function saveSettings(): void {
@@ -89,7 +91,10 @@ export function initSettings(): void {
     }
 }
 
-export function getContext() {
+export function getContext(): SillyTavernContext | null {
+    if (typeof globalThis.SillyTavern?.getContext !== 'function') {
+        return null;
+    }
     return globalThis.SillyTavern.getContext();
 }
 
@@ -107,4 +112,15 @@ export function getRollConfig(): MixedRollConfig {
         textColor: settings.secondaryDiceColor,
         enable3dDice: settings.enable3dDice,
     };
+}
+
+const settingsSubscribers: Set<(settings: DiceRollerSettings) => void> = new Set();
+
+export function subscribeSettings(callback: (settings: DiceRollerSettings) => void): () => void {
+    settingsSubscribers.add(callback);
+    return () => settingsSubscribers.delete(callback);
+}
+
+function notifySubscribers(): void {
+    settingsSubscribers.forEach(cb => cb(getSettings()));
 }

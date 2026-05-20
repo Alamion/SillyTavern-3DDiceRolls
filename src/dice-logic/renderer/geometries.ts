@@ -18,7 +18,6 @@ const MATERIAL_OPTIONS = {
     flatShading: true,
 };
 
-
 const DEFAULT_DICE_OPTIONS: DiceOptions = {
     diceColor: '#202020',
     textColor: '#ffffff',
@@ -37,6 +36,13 @@ export interface DiceGeometryData {
     body: Body
     geometry: Mesh
     values: number[]
+}
+
+const textureCache = new Map<string, Texture>();
+
+export function clearTextureCache(): void {
+    textureCache.forEach(texture => texture.dispose());
+    textureCache.clear();
 }
 
 export default abstract class DiceGeometry {
@@ -372,6 +378,11 @@ export default abstract class DiceGeometry {
         const text = this.labels[index];
         if (text == undefined) return null;
 
+        const cacheKey = `texture_${this.sides}_${this.textureSize}_${index}_${this.diceColor}_${this.textColor}`;
+        if (textureCache.has(cacheKey)) {
+            return textureCache.get(cacheKey)!;
+        }
+
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = this.textureSize;
         let textStartY = this.textureSize / 2;
@@ -420,20 +431,26 @@ export default abstract class DiceGeometry {
 
         const texture = new Texture(canvas);
         texture.needsUpdate = true;
+        textureCache.set(cacheKey, texture);
         return texture;
     }
 
     clone(): DiceGeometryData {
-        // Get material from existing body or create default
         const existingMaterial = this.body?.material ?? undefined;
         const clonedBody = new Body({
             mass: this.mass,
             shape: this.shape,
             material: existingMaterial,
         });
+        const clonedGeometry = this.geometry.clone();
+        if (Array.isArray(clonedGeometry.material)) {
+            clonedGeometry.material = clonedGeometry.material.map(m => m.clone());
+        } else {
+            clonedGeometry.material = clonedGeometry.material.clone();
+        }
         return {
             body: clonedBody,
-            geometry: this.geometry.clone(),
+            geometry: clonedGeometry,
             values: this.values,
         };
     }
@@ -808,6 +825,11 @@ export class D4DiceGeometry extends DiceGeometry {
     }
 
     createTextTexture(index: number) {
+        const cacheKey = `d4_texture_${index}_${this.diceColor}_${this.textColor}`;
+        if (textureCache.has(cacheKey)) {
+            return textureCache.get(cacheKey)!;
+        }
+
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d')!;
         const textStart =
@@ -831,6 +853,7 @@ export class D4DiceGeometry extends DiceGeometry {
         }
         const texture = new Texture(canvas);
         texture.needsUpdate = true;
+        textureCache.set(cacheKey, texture);
         return texture;
     }
 }

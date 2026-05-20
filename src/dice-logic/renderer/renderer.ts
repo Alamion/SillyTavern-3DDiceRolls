@@ -1,17 +1,8 @@
 import { ResourceTracker } from './resource';
 import { SceneManager } from './scene';
 import { PhysicsWorld } from './physics';
-import { D2Dice, DiceShape } from './shapes';
+import { DiceShape, createDiceShape } from './shapes';
 import type { DiceGeometryData } from './geometries';
-import {
-    D4Dice,
-    D6Dice,
-    D8Dice,
-    D10Dice,
-    D12Dice,
-    D20Dice,
-    D100Dice,
-} from './shapes';
 import { debug } from '../../utils/logging';
 
 export interface DiceRendererConfig {
@@ -33,11 +24,11 @@ export class DiceRenderer {
     private onComplete: RollCompleteCallback | null = null;
 
     private readonly frameRate = 1 / 60;
-    private readonly threshold = 5;
+    private readonly velocityThreshold = 5;
     private allStopped = false;
-    private extraFrames = 60;
-    private disappearFrames = 60;
-    private maxDisappearFrames = 60;
+    private maxRollSecs = 10;
+    private showFrames = 60;
+    private fadeFrames = 60;
 
     private container: HTMLDivElement;
 
@@ -61,7 +52,8 @@ export class DiceRenderer {
             pointer-events: none;
             z-index: 9999;
         `;
-        if (process.env.NODE_ENV !== 'production') {
+        const isDevelopment = process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== undefined;
+        if (isDevelopment) {
             this.container.style.cssText += `
                 background-color: #333333;
             `;
@@ -110,81 +102,13 @@ export class DiceRenderer {
 
         for (const data of diceData) {
             const sides = data.values.length;
-            let dice: DiceShape;
-
-            switch (sides) {
-                case 2:
-                    dice = new D2Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                case 4:
-                    dice = new D4Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                case 6:
-                    dice = new D6Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                case 8:
-                    dice = new D8Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                case 10:
-                    dice = new D10Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                case 12:
-                    dice = new D12Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                case 20:
-                    dice = new D20Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                case 100:
-                    dice = new D100Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-                    break;
-                default:
-                    dice = new D6Dice(
-                        this.width,
-                        this.height,
-                        data,
-                        vector,
-                    );
-            }
+            const dice = createDiceShape(
+                sides,
+                this.width,
+                this.height,
+                data,
+                vector,
+            );
 
             diceShapes.push(dice);
         }
@@ -202,12 +126,11 @@ export class DiceRenderer {
     private start(): void {
         this.isAnimating = true;
         this.iterations = 0;
-        this.extraFrames = 60;
+        this.showFrames = 60;
         this.allStopped = false;
-        this.disappearFrames = this.maxDisappearFrames;
+        this.fadeFrames = 60;
         this.container.style.opacity = '1';
         debug('DiceRenderer: Animation started');
-        this.reportDice();
         this.animate();
     }
 
@@ -232,13 +155,13 @@ export class DiceRenderer {
 
         if (this.allStopped || this.checkRollFinished()) {
             this.allStopped = true;
-            if (this.extraFrames > 0) {
-                this.extraFrames--;
-            } else if (this.disappearFrames > 0) {
-                const progress = this.disappearFrames / this.maxDisappearFrames;
+            if (this.showFrames > 0) {
+                this.showFrames--;
+            } else if (this.fadeFrames > 0) {
+                const progress = this.fadeFrames / 60;
                 const easeOut = 1 - Math.pow(1 - progress, 3);
                 this.container.style.opacity = easeOut.toString();
-                this.disappearFrames--;
+                this.fadeFrames--;
             } else {
                 this.stop();
                 setTimeout(() => this.dispose(), 1000);
@@ -257,7 +180,9 @@ export class DiceRenderer {
 
         // Check every 60 frames if all dice have stopped moving (velocity < 1)
         if (this.iterations % 60 === 0 && this.dice.length > 0) {
-            this.reportDice();
+            if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== undefined) {
+                this.reportDice();
+            }
         }
 
         this.sceneManager.render();
@@ -267,7 +192,7 @@ export class DiceRenderer {
         let allStoppedNow = true;
 
         for (const die of this.dice) {
-            if (this.iterations > 10 / this.frameRate) {
+            if (this.iterations > this.maxRollSecs / this.frameRate) {
                 debug('Animation timeout for die');
                 die.stopped = true;
                 continue;
@@ -277,19 +202,21 @@ export class DiceRenderer {
             const v = die.body.velocity;
 
             if (
-                Math.abs(a.length()) < this.threshold &&
-                Math.abs(v.length()) < this.threshold
+                a.length() < this.velocityThreshold &&
+                v.length() < this.velocityThreshold
             ) {
                 die.staleIterations++;
                 if (this.iterations - die.staleIterations > 5) {
                     die.stopped = true;
-                    continue;
                 }
             } else {
                 die.stopped = false;
                 die.staleIterations = 0;
             }
-            allStoppedNow = false;
+
+            if (!die.stopped) {
+                allStoppedNow = false;
+            }
         }
 
         return allStoppedNow;

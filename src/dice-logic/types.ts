@@ -14,11 +14,19 @@ export interface DiceGroup {
     modifiers: DiceModifiers
 }
 
-export interface ParsedExpression {
-    type: 'dice' | 'number'
-    value: DiceGroup | number
+export interface DiceExpression {
+    type: 'dice'
+    value: DiceGroup
     operation: '+' | '-'
 }
+
+export interface NumberExpression {
+    type: 'number'
+    value: number
+    operation: '+' | '-'
+}
+
+export type ParsedExpression = DiceExpression | NumberExpression;
 
 export interface ParseResult {
     expressions: ParsedExpression[]

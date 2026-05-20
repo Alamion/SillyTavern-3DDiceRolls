@@ -6,7 +6,7 @@ This is a SillyTavern extension providing 3D dice rolling mechanics with dice no
 
 ## Important Reference Files
 
-**ALWAYS check `tmp/st-context.js` when working with SillyTavern APIs!**
+**ALWAYS check `context/st-context.js` when working with SillyTavern APIs!**
 This file contains the actual exports from SillyTavern's getContext() method, including:
 - All available context methods (saveSettingsDebounced, writeExtensionField, etc.)
 - Proper API signatures
@@ -67,7 +67,7 @@ pnpm run lint:fix
 - All functions must have explicit return types
 - Use interfaces for complex object shapes
 - Use `global.d.ts` for SillyTavern API types
-- Check `tmp/st-context.js` for actual API types before declaring them in `global.d.ts`
+- Check `context/st-context.js` for actual API types before declaring them in `global.d.ts`
 
 ### React Patterns
 - Use functional components with hooks (`useState`, `useEffect`)

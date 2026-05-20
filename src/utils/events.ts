@@ -25,22 +25,17 @@ export async function handleRollEvent(payload: DiceRollEventPayload): Promise<Ro
 
     const settings = getSettings();
 
-    let result: RollResult;
-
     try {
-        if (settings.enable3dDice) {
-            result = await executeUnifiedRoll(notation, getRollConfig());
-        } else {
-            result = execute2DRoll(notation);
-        }
+        const result = settings.enable3dDice
+            ? await executeUnifiedRoll(notation, getRollConfig())
+            : execute2DRoll(notation);
+
+        notifyRollResult(result);
+        return result;
     } catch (err) {
         error('Roll event failed to execute', 'Event Handler', [err]);
         return null;
     }
-
-    notifyRollResult(result);
-
-    return result;
 }
 
 export function registerDiceRollEvent(): void {

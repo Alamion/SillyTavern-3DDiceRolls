@@ -4,23 +4,12 @@ import { DiceFactory } from './renderer';
 import type { DiceGroup, DiceGroupResult, DiceRoll, RollResult } from './types';
 import { debug, warn } from '../utils/logging';
 import { MixedRollConfig } from '../utils/settings';
+import { formatModifiers, applyKeepDrop, formatRollValues } from './utils';
 
 const SUPPORTED_3D_SIDES = new Set([2, 4, 6, 8, 10, 12, 20, 100]);
 
 function shouldUse3D(diceGroup: DiceGroup): boolean {
     return SUPPORTED_3D_SIDES.has(diceGroup.sides);
-}
-
-function formatModifiers(modifiers: DiceGroup['modifiers']): string {
-    const parts: string[] = [];
-    if (modifiers.keepHighest) parts.push(`kh${modifiers.keepHighest}`);
-    if (modifiers.keepLowest) parts.push(`kl${modifiers.keepLowest}`);
-    if (modifiers.dropHighest) parts.push(`dh${modifiers.dropHighest}`);
-    if (modifiers.dropLowest) parts.push(`dl${modifiers.dropLowest}`);
-    if (modifiers.reroll) parts.push(`r${modifiers.reroll}`);
-    if (modifiers.explode) parts.push(modifiers.explode === 1 ? '!' : `!${modifiers.explode}`);
-    if (modifiers.sort) parts.push(modifiers.sort === 'asc' ? 'u' : 's');
-    return parts.join('');
 }
 
 async function execute3DPart(
@@ -63,23 +52,7 @@ function applyModifiersToRolls(values: number[], sides: number, modifiers: DiceG
         dropped: false,
     }));
 
-    if (modifiers.keepHighest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => b.roll.value - a.roll.value);
-        const keepIndices = new Set(sorted.slice(0, modifiers.keepHighest).map(s => s.idx));
-        rolls = rolls.map((r, idx) => ({ ...r, dropped: !keepIndices.has(idx) }));
-    } else if (modifiers.keepLowest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => a.roll.value - b.roll.value);
-        const keepIndices = new Set(sorted.slice(0, modifiers.keepLowest).map(s => s.idx));
-        rolls = rolls.map((r, idx) => ({ ...r, dropped: !keepIndices.has(idx) }));
-    } else if (modifiers.dropHighest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => b.roll.value - a.roll.value);
-        const dropIndices = new Set(sorted.slice(0, modifiers.dropHighest).map(s => s.idx));
-        rolls = rolls.map((r, idx) => ({ ...r, dropped: dropIndices.has(idx) }));
-    } else if (modifiers.dropLowest) {
-        const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => a.roll.value - b.roll.value);
-        const dropIndices = new Set(sorted.slice(0, modifiers.dropLowest).map(s => s.idx));
-        rolls = rolls.map((r, idx) => ({ ...r, dropped: dropIndices.has(idx) }));
-    }
+    rolls = applyKeepDrop(rolls, modifiers);
 
     if (modifiers.sort) {
         const dropped = rolls.filter(r => r.dropped);
@@ -180,22 +153,14 @@ async function executeMixedRoll(
     for (const expr of parsed.expressions) {
         if (expr.type === 'dice') {
             const group = mergedDiceGroups[diceGroupIdx];
-            const formattedRolls = group.rolls.map(r => {
-                let s = String(r.value);
-                if (r.dropped) {
-                    s = `~~${s}~~`;
-                } else if (r.exploded) {
-                    s = `${s}!`;
-                }
-                return s;
-            });
+            const rollsStr = formatRollValues(group.rolls);
 
             if (isFirst) {
-                detailsParts.push(`(${formattedRolls.join(' + ')})`);
+                detailsParts.push(`(${rollsStr})`);
                 isFirst = false;
             } else {
                 const op = expr.operation === '-' ? ' - ' : ' + ';
-                detailsParts.push(`${op}(${formattedRolls.join(' + ')})`);
+                detailsParts.push(`${op}(${rollsStr})`);
             }
             diceGroupIdx++;
         } else {

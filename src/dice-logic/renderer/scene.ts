@@ -8,7 +8,7 @@ import {
     ShadowMaterial,
     Vector3,
     WebGLRenderer,
-    PCFSoftShadowMap, //CameraHelper,
+    PCFSoftShadowMap, CameraHelper, //CameraHelper,
 } from 'three';
 
 export class SceneManager {
@@ -113,21 +113,21 @@ export class SceneManager {
         this.directionalLight = new DirectionalLight(0xffffff, 0.8);
         this.directionalLight.position.set(-maxwidth / 2, maxwidth / 2, maxwidth );
         this.directionalLight.castShadow = this.shadows;
-        // this.directionalLight.shadow.camera.near = maxwidth / 10
-        // this.directionalLight.shadow.camera.far = maxwidth * 5
-        // this.directionalLight.shadow.camera.left = -maxwidth * 0.8
-        // this.directionalLight.shadow.camera.right = maxwidth * 0.8
-        // this.directionalLight.shadow.camera.top = maxwidth * 0.8
-        // this.directionalLight.shadow.camera.bottom = -maxwidth * 0.8
-        // this.directionalLight.shadow.mapSize.width = 2048
-        // this.directionalLight.shadow.mapSize.height = 2048
-        // this.directionalLight.shadow.bias = -0.001
+        this.directionalLight.shadow.camera.near = maxwidth / 10;
+        this.directionalLight.shadow.camera.far = maxwidth * 5;
+        this.directionalLight.shadow.camera.left = -maxwidth;
+        this.directionalLight.shadow.camera.right = maxwidth;
+        this.directionalLight.shadow.camera.top = maxwidth;
+        this.directionalLight.shadow.camera.bottom = -maxwidth;
+        this.directionalLight.shadow.mapSize.width = 2048;
+        this.directionalLight.shadow.mapSize.height = 2048;
+        this.directionalLight.shadow.bias = 0.001;
         this.scene.add(this.directionalLight);
 
-        // if (process.env.NODE_ENV !== 'production') {
-        //     const shadowCameraHelper = new CameraHelper(this.directionalLight.shadow.camera);
-        //     this.scene.add(shadowCameraHelper);
-        // }
+        if (process.env.NODE_ENV !== 'production') {
+            const shadowCameraHelper = new CameraHelper(this.directionalLight.shadow.camera);
+            this.scene.add(shadowCameraHelper);
+        }
 
         this.ambientLight = new AmbientLight(0xffffff, 0.2);
         this.scene.add(this.ambientLight);
@@ -136,7 +136,7 @@ export class SceneManager {
     initDesk(): void {
         if (this.desk) this.scene.remove(this.desk);
         const shadowplane = new ShadowMaterial();
-        shadowplane.opacity = 1;
+        shadowplane.opacity = 0.5;
         this.desk = new Mesh(
             new PlaneGeometry(
                 this.display.containerWidth * 6,
@@ -147,9 +147,6 @@ export class SceneManager {
             shadowplane,
         );
         this.desk.receiveShadow = this.shadows;
-        // Rotate desk to be a horizontal floor at z=0
-        this.desk.rotation.x = -Math.PI / 2;
-        this.desk.position.set(0, 0, -0.01);
         this.scene.add(this.desk);
     }
 

@@ -4,7 +4,12 @@ import { handleRollEvent } from './events';
 
 export function registerRollCommand(): void {
     debug('Registering roll command');
-    const { SlashCommandParser, SlashCommand, SlashCommandArgument, ARGUMENT_TYPE } = getContext();
+    const context = getContext();
+    if (!context) {
+        warn('Context not available - /roll command disabled', 'Dice Roller');
+        return;
+    }
+    const { SlashCommandParser, SlashCommand, SlashCommandArgument, ARGUMENT_TYPE } = context;
     if (!SlashCommandParser) {
         warn('Slash command parser not available - /roll command disabled', 'Dice Roller');
         return;

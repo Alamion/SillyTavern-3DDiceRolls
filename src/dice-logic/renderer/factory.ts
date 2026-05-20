@@ -7,10 +7,24 @@ import {
     D12DiceGeometry,
     D20DiceGeometry,
     D100DiceGeometry,
-    type DiceGeometryData, D2DiceGeometry,
+    D2DiceGeometry,
+    type DiceGeometryData,
 } from './geometries';
 import { DiceRenderer, type DiceRendererConfig } from './renderer';
 import { debug } from '../../utils/logging';
+
+type DiceGeometryClass = new (w: number, h: number, options: { diceColor: string; textColor: string }, scaler: number) => { create(): { clone(): DiceGeometryData }; values: number[] };
+
+const GEOMETRY_CLASSES: Record<number, DiceGeometryClass> = {
+    2: D2DiceGeometry,
+    4: D4DiceGeometry,
+    6: D6DiceGeometry,
+    8: D8DiceGeometry,
+    10: D10DiceGeometry,
+    12: D12DiceGeometry,
+    20: D20DiceGeometry,
+    100: D100DiceGeometry,
+};
 
 export interface DiceFactoryConfig extends DiceRendererConfig {
     diceColor: string
@@ -69,7 +83,6 @@ export class DiceFactory {
                 const slice = results.slice(resultIndex, resultIndex + geomCount);
                 resultIndex += geomCount;
 
-                // Special handling for d100: each logical d100 is represented by two d10 rolls (tens + ones)
                 if (data.diceGroup.sides === 100) {
                     const logicalCount = data.diceGroup.count;
                     const expectedGeomCount = logicalCount * 2;
@@ -114,7 +127,6 @@ export class DiceFactory {
             debug('3D dice roll completed:', groupedResults);
             onComplete(groupedResults);
 
-            // Auto-dispose after a delay
             setTimeout(() => {
                 this.renderer?.dispose();
                 this.renderer = null;
@@ -125,7 +137,6 @@ export class DiceFactory {
     private createDiceGeometries(diceGroup: DiceGroup): DiceGeometryData[] {
         const geometries: DiceGeometryData[] = [];
 
-        // d100 is represented as two d10 dice (tens and ones) per logical die
         const isD100 = diceGroup.sides === 100;
         const physicalSides = isD100 ? 10 : diceGroup.sides;
         const physicalPerLogical = isD100 ? 2 : 1;
@@ -142,103 +153,21 @@ export class DiceFactory {
         return geometries;
     }
 
-    private createGeometryForSides(
-        sides: number,
-    ): DiceGeometryData | null {
+    private createGeometryForSides(sides: number): DiceGeometryData | null {
+        const GeometryClass = GEOMETRY_CLASSES[sides];
+        if (!GeometryClass) {
+            return null;
+        }
+
         const options = {
             diceColor: this.config.diceColor,
             textColor: this.config.textColor,
         };
 
-        let geom: DiceGeometryData | null = null;
-
-        switch (sides) {
-            case 2: {
-                const g = new D2DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            case 4: {
-                const g = new D4DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            case 6: {
-                const g = new D6DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            case 8: {
-                const g = new D8DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            case 10: {
-                const g = new D10DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            case 12: {
-                const g = new D12DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            case 20: {
-                const g = new D20DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            case 100: {
-                const g = new D100DiceGeometry(
-                    this.width,
-                    this.height,
-                    options,
-                    this.config.scaler,
-                );
-                geom = g.create().clone();
-                break;
-            }
-            default:
-                return null;
-        }
+        const g = new GeometryClass(this.width, this.height, options, this.config.scaler);
+        const geom = g.create().clone();
 
         if (geom) {
-            // Convert 0-indexed values to 1-indexed (dice roll results)
             geom.values = geom.values.map(v => v + 1);
             debug(`DiceFactory: Created ${sides}-sided die with values:`, geom.values);
         }

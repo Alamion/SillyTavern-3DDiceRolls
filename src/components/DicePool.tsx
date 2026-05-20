@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20, DiceD100, DiceDUnknown } from './2d_dices';
+import { DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20, DiceD100, DiceD2 } from './2d_dices';
 import { debug } from '../utils/logging';
 import { getSettings } from '../utils/settings';
 
@@ -18,12 +18,10 @@ interface DiceConfig {
 
 interface DiceButtonsProps {
     onRoll: (notation: string) => void;
-    primaryColor?: string;
-    secondaryColor?: string;
 }
 
 const quickDice: DiceConfig[] = [
-    { notation: 'd2', Component: DiceDUnknown, label: 'd2' },
+    { notation: 'd2', Component: DiceD2, label: 'd2' },
     { notation: 'd4', Component: DiceD4, label: 'd4' },
     { notation: 'd6', Component: DiceD6, label: 'd6' },
     { notation: 'd8', Component: DiceD8, label: 'd8' },

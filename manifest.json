@@ -6,7 +6,7 @@
     "js": "dist/index.js",
     "css": "",
     "author": "Alamion",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "homePage": "https://github.com/Alamion/SillyTavern-3DDiceRolls",
     "auto_update": true
 }
