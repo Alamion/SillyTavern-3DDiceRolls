@@ -8,7 +8,7 @@ import {
     ShadowMaterial,
     Vector3,
     WebGLRenderer,
-    PCFSoftShadowMap, CameraHelper, //CameraHelper,
+    PCFSoftShadowMap, CameraHelper,
 } from 'three';
 
 export class SceneManager {
@@ -89,7 +89,7 @@ export class SceneManager {
         this.cameraHeight.close = this.cameraHeight.max / 2;
     }
 
-    initCamera(): void {
+    initCamera(diceCount?: number): void {
         if (this.camera) this.scene.remove(this.camera);
         this.camera = new PerspectiveCamera(
             35,
@@ -97,8 +97,23 @@ export class SceneManager {
             10,
             this.cameraHeight.max * 1.3,
         );
-        this.camera.position.z = this.cameraHeight.medium;
+
+        let z = this.cameraHeight.medium;
+        if (diceCount !== undefined) {
+            if (diceCount <= 3) z = this.cameraHeight.close;
+            else if (diceCount >= 10) z = this.cameraHeight.far;
+        }
+        this.camera.position.z = z;
         this.camera.lookAt(new Vector3(0, 0, 0));
+    }
+
+    getCameraInfo(): { z: number; fov: number; aspect: number } | null {
+        if (!this.camera) return null;
+        return {
+            z: this.camera.position.z,
+            fov: this.camera.fov,
+            aspect: this.display.currentWidth / this.display.currentHeight,
+        };
     }
 
     initLighting(): void {
@@ -136,7 +151,7 @@ export class SceneManager {
     initDesk(): void {
         if (this.desk) this.scene.remove(this.desk);
         const shadowplane = new ShadowMaterial();
-        shadowplane.opacity = 0.5;
+        shadowplane.opacity = 0.3;
         this.desk = new Mesh(
             new PlaneGeometry(
                 this.display.containerWidth * 6,

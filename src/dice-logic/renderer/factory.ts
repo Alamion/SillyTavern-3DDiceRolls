@@ -10,8 +10,7 @@ import {
     D2DiceGeometry,
     type DiceGeometryData,
 } from './geometries';
-import { DiceRenderer, type DiceRendererConfig } from './renderer';
-import { debug } from '../../utils/logging';
+import { type DiceRendererConfig } from './renderer';
 
 type DiceGeometryClass = new (w: number, h: number, options: { diceColor: string; textColor: string }, scaler: number) => { create(): { clone(): DiceGeometryData }; values: number[] };
 
@@ -32,152 +31,80 @@ export interface DiceFactoryConfig extends DiceRendererConfig {
     scaler: number
 }
 
-export class DiceFactory {
-    private renderer: DiceRenderer | null = null;
-
-    constructor(
-        private width: number,
-        private height: number,
-        private config: DiceFactoryConfig,
-    ) {}
-
-    async rollDice(
-        diceGroups: DiceGroup[],
-        onComplete: (results: { diceGroup: DiceGroup; values: number[] }[]) => void,
-    ): Promise<void> {
-        if (this.renderer) {
-            this.renderer.dispose();
-        }
-
-        const allDiceData: { diceGroup: DiceGroup; geometries: DiceGeometryData[] }[] = [];
-
-        for (const group of diceGroups) {
-            const geometries = this.createDiceGeometries(group);
-            allDiceData.push({ diceGroup: group, geometries });
-        }
-
-        const totalDice = allDiceData.reduce(
-            (sum, data) => sum + data.geometries.length,
-            0,
-        );
-
-        if (totalDice === 0) {
-            onComplete([]);
-            return;
-        }
-
-        this.renderer = new DiceRenderer(this.width, this.height, {
-            diceColor: this.config.diceColor,
-            textColor: this.config.textColor,
-            scaler: this.config.scaler,
-        });
-
-        const allGeometries = allDiceData.flatMap((d) => d.geometries);
-
-        this.renderer.roll(allGeometries, (results) => {
-            const groupedResults: { diceGroup: DiceGroup; values: number[] }[] = [];
-            let resultIndex = 0;
-
-            for (const data of allDiceData) {
-                const geomCount = data.geometries.length;
-                const slice = results.slice(resultIndex, resultIndex + geomCount);
-                resultIndex += geomCount;
-
-                if (data.diceGroup.sides === 100) {
-                    const logicalCount = data.diceGroup.count;
-                    const expectedGeomCount = logicalCount * 2;
-
-                    if (geomCount !== expectedGeomCount) {
-                        debug(
-                            'DiceFactory: d100 geometry/result count mismatch, falling back to raw values',
-                        );
-                        groupedResults.push({
-                            diceGroup: data.diceGroup,
-                            values: slice,
-                        });
-                        continue;
-                    }
-
-                    const combinedValues: number[] = [];
-                    for (let i = 0; i < logicalCount; i++) {
-                        const tensRoll = slice[i * 2] ?? 1;
-                        const onesRoll = slice[i * 2 + 1] ?? 1;
-
-                        const tensDigit = tensRoll % 10;
-                        const onesDigit = onesRoll % 10;
-                        let value = tensDigit * 10 + onesDigit;
-                        if (value === 0) {
-                            value = 100;
-                        }
-                        combinedValues.push(value);
-                    }
-
-                    groupedResults.push({
-                        diceGroup: data.diceGroup,
-                        values: combinedValues,
-                    });
-                } else {
-                    groupedResults.push({
-                        diceGroup: data.diceGroup,
-                        values: slice,
-                    });
-                }
-            }
-
-            debug('3D dice roll completed:', groupedResults);
-            onComplete(groupedResults);
-
-            setTimeout(() => {
-                this.renderer?.dispose();
-                this.renderer = null;
-            }, 2000);
-        });
+function getOrCreateGeometry(
+    sides: number,
+    config: DiceFactoryConfig,
+): DiceGeometryData | null {
+    const GeometryClass = GEOMETRY_CLASSES[sides];
+    if (!GeometryClass) {
+        return null;
     }
 
-    private createDiceGeometries(diceGroup: DiceGroup): DiceGeometryData[] {
-        const geometries: DiceGeometryData[] = [];
+    const options = {
+        diceColor: config.diceColor,
+        textColor: config.textColor,
+    };
 
-        const isD100 = diceGroup.sides === 100;
-        const physicalSides = isD100 ? 10 : diceGroup.sides;
+    const g = new GeometryClass(window.innerWidth, window.innerHeight, options, config.scaler);
+    const created = g.create();
+    if (!created) {
+        return null;
+    }
+    const geom = created.clone();
+
+    geom.values = geom.values.map(v => v + 1);
+
+    return geom;
+}
+
+export function prepareDiceGeometries(
+    diceGroups: DiceGroup[],
+    config: Partial<DiceFactoryConfig>,
+): { geometries: DiceGeometryData[]; groupSizes: number[] } {
+    const factoryConfig: DiceFactoryConfig = {
+        diceColor: config?.diceColor ?? '#4a90e2',
+        textColor: config?.textColor ?? '#ffffff',
+        scaler: config?.scaler ?? 1,
+        ...config,
+    };
+
+    const geometries: DiceGeometryData[] = [];
+    const groupSizes: number[] = [];
+
+    for (const group of diceGroups) {
+        const isD100 = group.sides === 100;
+        const physicalSides = isD100 ? 10 : group.sides;
         const physicalPerLogical = isD100 ? 2 : 1;
+        const totalPhysicalDice = group.count * physicalPerLogical;
 
-        const totalPhysicalDice = diceGroup.count * physicalPerLogical;
+        groupSizes.push(totalPhysicalDice);
 
         for (let i = 0; i < totalPhysicalDice; i++) {
-            const geometry = this.createGeometryForSides(physicalSides);
+            // For d100, alternate: tens die (i%2==0) uses D100DiceGeometry (face labels 00-90),
+            // ones die (i%2==1) uses D10DiceGeometry (face labels 0-9).
+            const effectiveSides = isD100 && i % 2 === 0 ? 100 : physicalSides;
+            const geometry = getOrCreateGeometry(effectiveSides, factoryConfig);
             if (geometry) {
                 geometries.push(geometry);
             }
         }
-
-        return geometries;
     }
 
-    private createGeometryForSides(sides: number): DiceGeometryData | null {
-        const GeometryClass = GEOMETRY_CLASSES[sides];
-        if (!GeometryClass) {
-            return null;
-        }
+    return { geometries, groupSizes };
+}
 
-        const options = {
-            diceColor: this.config.diceColor,
-            textColor: this.config.textColor,
-        };
+export class DiceFactory {
+    constructor(
+        _width: number,
+        _height: number,
+        private _config: DiceFactoryConfig,
+    ) {}
 
-        const g = new GeometryClass(this.width, this.height, options, this.config.scaler);
-        const geom = g.create().clone();
-
-        if (geom) {
-            geom.values = geom.values.map(v => v + 1);
-            debug(`DiceFactory: Created ${sides}-sided die with values:`, geom.values);
-        }
-
-        return geom;
+    prepareGeometries(diceGroups: DiceGroup[]): { geometries: DiceGeometryData[]; groupSizes: number[] } {
+        return prepareDiceGeometries(diceGroups, this._config);
     }
 
     dispose(): void {
-        this.renderer?.dispose();
-        this.renderer = null;
     }
 }
 

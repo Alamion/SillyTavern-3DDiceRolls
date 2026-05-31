@@ -1,14 +1,72 @@
-import type { DiceModifiers, DiceRoll } from './types';
+import type { DiceGroupNode, DiceModifiers, DiceRoll } from './types';
+
+export function buildGroupKey(node: DiceGroupNode | { count: number; sides: number; fudge: boolean; customFaces?: number[] }, index: number): string {
+    return `${node.count}d${node.sides}_${node.fudge ? 'f' : ''}_${index}_${node.customFaces ? node.customFaces.join(',') : ''}`;
+}
 
 export function formatModifiers(modifiers: DiceModifiers): string {
     const parts: string[] = [];
+    if (modifiers.min) parts.push(`min${modifiers.min}`);
+    if (modifiers.max) parts.push(`max${modifiers.max}`);
+    if (modifiers.explode) {
+        const e = modifiers.explode;
+        if (e.compounding && e.penetrating) {
+            parts.push(`!!p${e.comparePoint ? `${e.comparePoint.operator}${e.comparePoint.value}` : ''}`);
+        } else if (e.penetrating) {
+            parts.push(`!p${e.comparePoint ? `${e.comparePoint.operator}${e.comparePoint.value}` : ''}`);
+        } else if (e.compounding) {
+            parts.push(`!!${e.comparePoint ? `${e.comparePoint.operator}${e.comparePoint.value}` : ''}`);
+        } else {
+            parts.push(`!${e.comparePoint ? `${e.comparePoint.operator}${e.comparePoint.value}` : ''}`);
+        }
+    }
+    if (modifiers.reroll) {
+        const r = modifiers.reroll;
+        const prefix = r.once ? 'ro' : 'r';
+        if (r.comparePoint) {
+            parts.push(`${prefix}${r.comparePoint.operator}${r.comparePoint.value}`);
+        } else {
+            parts.push(prefix);
+        }
+    }
+    if (modifiers.unique) {
+        const u = modifiers.unique;
+        const prefix = u.once ? 'uo' : 'u';
+        if (u.comparePoint) {
+            parts.push(`${prefix}${u.comparePoint.operator}${u.comparePoint.value}`);
+        } else {
+            parts.push(prefix);
+        }
+    }
     if (modifiers.keepHighest) parts.push(`kh${modifiers.keepHighest}`);
     if (modifiers.keepLowest) parts.push(`kl${modifiers.keepLowest}`);
     if (modifiers.dropHighest) parts.push(`dh${modifiers.dropHighest}`);
     if (modifiers.dropLowest) parts.push(`dl${modifiers.dropLowest}`);
-    if (modifiers.reroll) parts.push(`r${modifiers.reroll}`);
-    if (modifiers.explode) parts.push(modifiers.explode === 1 ? '!' : `!${modifiers.explode}`);
-    if (modifiers.sort) parts.push(modifiers.sort === 'asc' ? 'u' : 's');
+    if (modifiers.targetSuccess) {
+        const ts = modifiers.targetSuccess;
+        parts.push(`${ts.operator}${ts.value}`);
+    }
+    if (modifiers.targetFailure) {
+        const tf = modifiers.targetFailure;
+        parts.push(`f${tf.operator}${tf.value}`);
+    }
+    if (modifiers.criticalSuccess) {
+        if (modifiers.criticalSuccess === true) {
+            parts.push('cs');
+        } else {
+            const cs = modifiers.criticalSuccess;
+            parts.push(`cs${cs.operator}${cs.value}`);
+        }
+    }
+    if (modifiers.criticalFailure) {
+        if (modifiers.criticalFailure === true) {
+            parts.push('cf');
+        } else {
+            const cf = modifiers.criticalFailure;
+            parts.push(`cf${cf.operator}${cf.value}`);
+        }
+    }
+    if (modifiers.sort) parts.push(modifiers.sort === 'asc' ? 's' : 'sd');
     return parts.join('');
 }
 
@@ -43,10 +101,26 @@ export function applyKeepDrop(rolls: DiceRoll[], modifiers: DiceModifiers): Dice
 export function formatRollValues(rolls: DiceRoll[]): string {
     return rolls.map(r => {
         let s = String(r.value);
+        if (r.minRaised) {
+            s = `${s}^`;
+        }
+        if (r.maxCapped) {
+            s = `${s}v`;
+        }
         if (r.dropped) {
             s = `~~${s}~~`;
+        } else if (r.compounded) {
+            s = `${s}!!`;
         } else if (r.exploded) {
-            s = `${s}!`;
+            s = r.penetrating ? `${s}!p` : `${s}!`;
+        } else if (r.criticalSuccess) {
+            s = `${s}**`;
+        } else if (r.criticalFailure) {
+            s = `${s}__`;
+        } else if (r.targetSuccess) {
+            s = `${s}*`;
+        } else if (r.targetFailure) {
+            s = `${s}_`;
         }
         return s;
     }).join(' + ');

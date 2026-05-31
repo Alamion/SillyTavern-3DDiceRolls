@@ -2,6 +2,11 @@ import { DiceRollerSettings } from './settings';
 
 export const MODULE_NAME = '3DDiceRolls';
 
+export const MAX_EXPLOSIONS = 1000;
+export const MAX_ROLL_SECONDS = 10;
+export const VELOCITY_THRESHOLD = 5;
+export const FRAME_RATE = 1 / 60;
+
 export const DEFAULT_SETTINGS: DiceRollerSettings = {
     enable3dDice: true,
     injectResult: false,

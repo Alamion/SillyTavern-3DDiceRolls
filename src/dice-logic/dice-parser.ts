@@ -1,147 +1,420 @@
-import type { DiceGroup, DiceModifiers, ParseResult } from './types';
-import { debug } from '../utils/logging';
+import { tokenize, LexerToken } from './dice-lexer';
+import type { ASTNode, ComparePoint, DiceModifiers, TokenType } from './types';
+import { debug, warn } from '../utils/logging';
 
-const DICE_REGEX = /([+-]?)\s*(?:(\d+)\s*#\s*)?(\d+)?d(\d+)(?:(kh|kl|dh|dl|r|!!|!|u|s)(\d+)?)?/i;
-const NUMBER_REGEX = /([+-]?)\s*(\d+)(?!\s*d)/i;
+const PRECEDENCE: Record<string, number> = {
+    '^': 4,
+    '*': 3,
+    '/': 3,
+    '%': 3,
+    '+': 2,
+    '-': 2,
+};
 
-function parseDiceModifiers(modifier: string, value?: string): DiceModifiers {
-    const mods: DiceModifiers = {};
-    const numValue = value ? parseInt(value, 10) : 1;
-
-    switch (modifier.toLowerCase()) {
-        case 'kh':
-        case 'k':
-            mods.keepHighest = numValue;
-            break;
-        case 'kl':
-            mods.keepLowest = numValue;
-            break;
-        case 'dh':
-            mods.dropHighest = numValue;
-            break;
-        case 'dl':
-            mods.dropLowest = numValue;
-            break;
-        case 'r':
-            mods.reroll = numValue;
-            break;
-        case '!!':
-            mods.explode = numValue;
-            break;
-        case '!':
-            mods.explode = 1;
-            break;
-        case 'u':
-            mods.sort = 'asc';
-            break;
-        case 's':
-            mods.sort = 'desc';
-            break;
+function parseModifierValue(token: LexerToken): number {
+    if (token.type === 'NUMBER') {
+        return typeof token.value === 'number' ? token.value : parseInt(token.value as string, 10);
     }
-
-    return mods;
+    const text = token.text;
+    const match = text.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 1;
 }
 
-function parseDiceGroup(match: RegExpExecArray): { group: DiceGroup; operation: '+' | '-' } | null {
-    const operation = (match[1] === '-' ? '-' : '+') as '+' | '-';
-    const count = match[3] ? parseInt(match[3], 10) : 1;
-    const sides = parseInt(match[4], 10);
+function hasEmbeddedNumber(token: LexerToken): boolean {
+    return /\d/.test(token.text);
+}
 
-    if (sides < 1 || count < 1) {
-        return null;
+class TokenStream {
+    private tokens: LexerToken[];
+    private position: number = 0;
+
+    constructor(tokens: LexerToken[]) {
+        this.tokens = tokens;
     }
+
+    peek(): LexerToken | undefined {
+        return this.tokens[this.position];
+    }
+
+    consume(): LexerToken | undefined {
+        return this.tokens[this.position++];
+    }
+
+    expect(type: TokenType): LexerToken | undefined {
+        const token = this.peek();
+        if (token && token.type === type) {
+            return this.consume();
+        }
+        return undefined;
+    }
+
+    has(type: TokenType): boolean {
+        const token = this.peek();
+        return token ? token.type === type : false;
+    }
+
+    isEnd(): boolean {
+        const token = this.peek();
+        return token ? token.type === 'END' : true;
+    }
+}
+
+function parseExpression(stream: TokenStream): ASTNode {
+    return parseAddSub(stream);
+}
+
+function parseAddSub(stream: TokenStream): ASTNode {
+    let left = parseMulDivMod(stream);
+
+    while (stream.peek() && (stream.peek()!.type === 'PLUS' || stream.peek()!.type === 'MINUS')) {
+        const operator = stream.consume()!.type === 'PLUS' ? '+' : '-';
+        const right = parseMulDivMod(stream);
+        left = { type: 'BinaryOp', operator, left, right };
+    }
+
+    return left;
+}
+
+function parseMulDivMod(stream: TokenStream): ASTNode {
+    let left = parseExponent(stream);
+
+    while (stream.peek() && (stream.peek()!.type === 'MULTIPLY' || stream.peek()!.type === 'DIVIDE' || stream.peek()!.type === 'MODULO')) {
+        const operatorToken = stream.consume()!;
+        const operator = (operatorToken.type === 'MULTIPLY' ? '*' : operatorToken.type === 'DIVIDE' ? '/' : '%') as '+' | '-' | '*' | '/' | '%' | '^';
+        const right = parseExponent(stream);
+        left = { type: 'BinaryOp', operator, left, right };
+    }
+
+    return left;
+}
+
+function parseExponent(stream: TokenStream): ASTNode {
+    let left = parseUnary(stream);
+
+    while (stream.peek() && stream.peek()!.type === 'EXPONENT') {
+        stream.consume();
+        const right = parseUnary(stream);
+        left = { type: 'BinaryOp', operator: '^', left, right };
+    }
+
+    return left;
+}
+
+function parseUnary(stream: TokenStream): ASTNode {
+    if (stream.peek() && (stream.peek()!.type === 'PLUS' || stream.peek()!.type === 'MINUS')) {
+        const operator = stream.consume()!.type === 'PLUS' ? '+' : '-';
+        const operand = parseUnary(stream);
+        return { type: 'UnaryOp', operator, operand };
+    }
+    return parsePrimary(stream);
+}
+
+function parsePrimary(stream: TokenStream): ASTNode {
+    const token = stream.peek();
+
+    if (!token) {
+        warn('Unexpected end of input', 'Parser');
+        return { type: 'NumericLiteral', value: 0 };
+    }
+
+    if (token.type === 'LPAREN') {
+        stream.consume();
+        const expr = parseExpression(stream);
+        if (stream.peek() && stream.peek()!.type === 'RPAREN') {
+            stream.consume();
+        }
+        return { type: 'Parenthesized', expression: expr };
+    }
+
+    if (token.type === 'NUMBER') {
+        stream.consume();
+        return { type: 'NumericLiteral', value: typeof token.value === 'number' ? token.value : parseInt(token.value as string, 10) };
+    }
+
+    if (token.type === 'DICE') {
+        return parseDiceGroup(stream);
+    }
+
+    if (token.type === 'MINUS') {
+        stream.consume();
+        const operand = parsePrimary(stream);
+        return { type: 'UnaryOp', operator: '-', operand };
+    }
+
+    warn(`Unexpected token: ${token.type} (${token.text})`, 'Parser');
+    stream.consume();
+    return { type: 'NumericLiteral', value: 0 };
+}
+
+function isCompareType(type?: TokenType): boolean {
+    return type === 'GT' || type === 'GTE' || type === 'LT' || type === 'LTE' || type === 'EQ' || type === 'NEQ';
+}
+
+function mapCompareOperator(token: LexerToken): ComparePoint['operator'] {
+    const opMap: Record<string, ComparePoint['operator']> = {
+        GT: '>',
+        GTE: '>=',
+        LT: '<',
+        LTE: '<=',
+        EQ: '=',
+        NEQ: '<>',
+    };
+    return opMap[token.type] || '=';
+}
+
+function parseComparePoint(stream: TokenStream): ComparePoint | undefined {
+    const next = stream.peek();
+    if (next && isCompareType(next.type)) {
+        const opToken = stream.consume()!;
+        const valueToken = stream.peek();
+        const value = valueToken && valueToken.type === 'NUMBER'
+            ? (typeof valueToken.value === 'number' ? valueToken.value : parseInt(valueToken.value as string, 10))
+            : 0;
+        if (valueToken && valueToken.type === 'NUMBER') {
+            stream.consume();
+        }
+        return {
+            operator: mapCompareOperator(opToken),
+            value,
+        };
+    }
+    return undefined;
+}
+
+function parseDiceGroup(stream: TokenStream): ASTNode {
+    const token = stream.consume();
+    if (!token) {
+        return { type: 'NumericLiteral', value: 0 };
+    }
+
+    const diceValue = token.value as { count: number; sides: number; fudge: boolean; customFaces?: number[] };
+
+    const count = diceValue.count || 1;
+    const sides = diceValue.sides || 6;
+    const fudge = diceValue.fudge || false;
+    const customFaces: number[] | undefined = diceValue.customFaces;
 
     const modifiers: DiceModifiers = {};
 
-    if (match[5]) {
-        Object.assign(modifiers, parseDiceModifiers(match[5], match[6]));
+    const parseExplode = (tok: LexerToken) => {
+        const text = tok.text;
+        modifiers.explode = {};
+        modifiers.explode.compounding = text.startsWith('!!') || undefined;
+        modifiers.explode.penetrating = text.endsWith('p') || undefined;
+        const cp = parseComparePoint(stream);
+        if (cp) modifiers.explode.comparePoint = cp;
+    };
+
+    const parseReroll = (tok: LexerToken) => {
+        const text = tok.text;
+        const once = text.startsWith('ro');
+        if (hasEmbeddedNumber(tok)) {
+            const val = parseModifierValue(tok);
+            modifiers.reroll = { once, comparePoint: { operator: '<=', value: val } };
+        } else if (stream.peek() && isCompareType(stream.peek()?.type)) {
+            const cp = parseComparePoint(stream);
+            modifiers.reroll = { once, comparePoint: cp };
+        } else {
+            const val = stream.peek()?.type === 'NUMBER' ? parseModifierValue(stream.consume()!) : 1;
+            modifiers.reroll = { once, comparePoint: { operator: '<=', value: val } };
+        }
+    };
+
+    const parseUnique = (tok: LexerToken) => {
+        const once = tok.text.startsWith('uo');
+        if (stream.peek() && isCompareType(stream.peek()?.type)) {
+            const cp = parseComparePoint(stream);
+            modifiers.unique = { once, comparePoint: cp };
+        } else {
+            modifiers.unique = { once };
+        }
+    };
+
+    const parseKeep = (tok: LexerToken) => {
+        const text = tok.text;
+        if (text.startsWith('kl')) {
+            modifiers.keepLowest = hasEmbeddedNumber(tok) ? parseModifierValue(tok) : 1;
+        } else if (text.startsWith('kh') || text === 'k') {
+            modifiers.keepHighest = hasEmbeddedNumber(tok) ? parseModifierValue(tok) : 1;
+        } else {
+            modifiers.keepHighest = hasEmbeddedNumber(tok) ? parseModifierValue(tok) : 1;
+        }
+    };
+
+    const parseDrop = (tok: LexerToken) => {
+        const text = tok.text;
+        if (text.startsWith('dh')) {
+            modifiers.dropHighest = hasEmbeddedNumber(tok) ? parseModifierValue(tok) : 1;
+        } else if (text.startsWith('dl')) {
+            modifiers.dropLowest = hasEmbeddedNumber(tok) ? parseModifierValue(tok) : 1;
+        } else {
+            modifiers.dropLowest = hasEmbeddedNumber(tok) ? parseModifierValue(tok) : 1;
+        }
+    };
+
+    while (stream.peek() && !stream.isEnd()) {
+        const peekToken = stream.peek()!;
+        let parsed = true;
+
+        // DICE tokens starting with bare "d" followed by digits are drop modifiers
+        if (peekToken.type === 'DICE' && /^d\d+$/.test(peekToken.text)) {
+            const tok = stream.consume()!;
+            modifiers.dropLowest = hasEmbeddedNumber(tok) ? parseModifierValue(tok) : 1;
+            break;
+        }
+
+        switch (peekToken.type) {
+            case 'MOD_EXPLODE':
+                parseExplode(stream.consume()!);
+                break;
+
+            case 'MOD_REROLL':
+                parseReroll(stream.consume()!);
+                break;
+
+            case 'MOD_UNIQUE':
+                parseUnique(stream.consume()!);
+                break;
+
+            case 'MOD_KEEP':
+                parseKeep(stream.consume()!);
+                break;
+
+            case 'MOD_DROP':
+                parseDrop(stream.consume()!);
+                break;
+
+            case 'MOD_SORT': {
+                const tok = stream.consume()!;
+                modifiers.sort = tok.text === 'sd' ? 'desc' : 'asc';
+                break;
+            }
+
+            case 'MOD_MIN': {
+                const tok = stream.consume()!;
+                modifiers.min = hasEmbeddedNumber(tok)
+                    ? parseModifierValue(tok)
+                    : (stream.peek()?.type === 'NUMBER' ? parseModifierValue(stream.consume()!) : 1);
+                break;
+            }
+
+            case 'MOD_MAX': {
+                const tok = stream.consume()!;
+                modifiers.max = hasEmbeddedNumber(tok)
+                    ? parseModifierValue(tok)
+                    : (stream.peek()?.type === 'NUMBER' ? parseModifierValue(stream.consume()!) : 1);
+                break;
+            }
+
+            case 'MOD_CS': {
+                stream.consume();
+                const cp = parseComparePoint(stream);
+                modifiers.criticalSuccess = cp || true;
+                break;
+            }
+
+            case 'MOD_CF': {
+                stream.consume();
+                const cp = parseComparePoint(stream);
+                modifiers.criticalFailure = cp || true;
+                break;
+            }
+
+            case 'MOD_FAILURE': {
+                stream.consume();
+                const cp = parseComparePoint(stream);
+                if (cp) modifiers.targetFailure = cp;
+                break;
+            }
+
+            // Target success (order 8) — bare compare point
+            case 'GT':
+            case 'GTE':
+            case 'LT':
+            case 'LTE':
+            case 'EQ':
+            case 'NEQ': {
+                const cp = parseComparePoint(stream);
+                if (cp) modifiers.targetSuccess = cp;
+                break;
+            }
+
+            default:
+                parsed = false;
+        }
+
+        if (!parsed) break;
     }
 
     return {
-        group: { count, sides, modifiers },
-        operation,
+        type: 'DiceGroup',
+        count,
+        sides,
+        modifiers,
+        customFaces,
+        fudge,
     };
 }
 
-export function parseDiceNotation(notation: string): ParseResult {
-    debug('Parsing dice notation:', notation);
-    const result: ParseResult = {
-        expressions: [],
-        original: notation,
-    };
+export function parseToAST(input: string): ASTNode {
+    const tokens = tokenize(input);
+    debug('Tokens:', tokens.map(t => ({ type: t.type, text: t.text })));
+    const stream = new TokenStream(tokens);
+    const ast = parseExpression(stream);
+    return ast;
+}
 
-    const workingNotation = notation.replace(/\s+/g, ' ');
-    let position = 0;
+export function parseDiceNotation(notation: string): { expressions: Array<{ type: 'dice' | 'number'; value: unknown; operation: '+' | '-' | '*' | '/' | '%' | '^' }>; original: string } {
+    try {
+        const ast = parseToAST(notation);
+        const expressions = flattenAST(ast, '+');
+        return { expressions, original: notation };
+    } catch (err) {
+        debug('Failed to parse dice notation:', notation, err);
+        return { expressions: [], original: notation };
+    }
+}
 
-    while (position < workingNotation.length) {
-        const remaining = workingNotation.slice(position);
-        const diceMatch = DICE_REGEX.exec(remaining);
-        const numberMatch = NUMBER_REGEX.exec(remaining);
-
-        let bestMatch: { type: 'dice' | 'number'; match: RegExpExecArray; index: number } | null = null;
-
-        if (diceMatch && diceMatch.index === 0) {
-            bestMatch = { type: 'dice', match: diceMatch, index: 0 };
-        }
-
-        if (numberMatch && numberMatch.index === 0) {
-            if (!bestMatch || numberMatch[0].length > 0) {
-                bestMatch = { type: 'number', match: numberMatch, index: 0 };
-            }
-        }
-
-        if (!bestMatch) {
-            position++;
-            continue;
-        }
-
-        if (bestMatch.type === 'dice') {
-            const parsed = parseDiceGroup(bestMatch.match);
-            if (parsed) {
-                result.expressions.push({
-                    type: 'dice',
-                    value: parsed.group,
-                    operation: parsed.operation,
-                });
-            }
-        } else {
-            const operation = (bestMatch.match[1] === '-' ? '-' : '+') as '+' | '-';
-            const value = parseInt(bestMatch.match[2], 10);
-            result.expressions.push({
-                type: 'number',
-                value,
-                operation,
-            });
-        }
-
-        position += bestMatch.match[0].length;
+function flattenAST(node: ASTNode, operation: '+' | '-' | '*' | '/' | '%' | '^' = '+'): Array<{ type: 'dice' | 'number'; value: unknown; operation: '+' | '-' | '*' | '/' | '%' | '^' }> {
+    if (node.type === 'NumericLiteral') {
+        return [{ type: 'number', value: node.value, operation }];
     }
 
-    if (result.expressions.length === 0 && /\d/.test(workingNotation)) {
-        const simpleNumber = parseInt(workingNotation.replace(/[^\d-]/g, ''), 10);
-        if (!isNaN(simpleNumber)) {
-            result.expressions.push({
-                type: 'number',
-                value: Math.abs(simpleNumber),
-                operation: simpleNumber < 0 ? '-' : '+',
-            });
-        }
+    if (node.type === 'DiceGroup') {
+        return [{ type: 'dice', value: node, operation }];
     }
 
-    if (result.expressions.length === 0) {
-        debug('Failed to parse dice notation:', notation);
-    } else {
-        debug('Successfully parsed notation:', notation, '->', result.expressions.length, 'expressions');
+    if (node.type === 'BinaryOp') {
+        const leftExprs = flattenAST(node.left, operation);
+        const rightExprs = flattenAST(node.right, node.operator);
+        return [...leftExprs, ...rightExprs];
     }
 
-    return result;
+    if (node.type === 'UnaryOp') {
+        const op = node.operator === '-' ? '-' as const : '+' as const;
+        return flattenAST(node.operand, op);
+    }
+
+    if (node.type === 'Parenthesized') {
+        return flattenAST(node.expression, operation);
+    }
+
+    return [];
 }
 
 export function validateNotation(notation: string): boolean {
-    if (!notation || notation.trim().length === 0) {
+    try {
+        const tokens = tokenize(notation);
+        for (const token of tokens) {
+            if (token.type === 'ERROR') {
+                return false;
+            }
+        }
+        parseToAST(notation);
+        return true;
+    } catch {
         return false;
     }
-
-    const parsed = parseDiceNotation(notation);
-    return parsed.expressions.length > 0;
 }
+
+export { PRECEDENCE };

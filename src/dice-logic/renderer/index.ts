@@ -1,4 +1,4 @@
-export { DiceRenderer, type DiceRendererConfig, type RollCompleteCallback } from './renderer';
+export { DiceRenderer, type DiceRendererConfig } from './renderer';
 export { SceneManager } from './scene';
 export { PhysicsWorld } from './physics';
 export {
@@ -26,4 +26,5 @@ export {
     clearTextureCache,
 } from './geometries';
 export { ResourceTracker } from './resource';
-export { DiceFactory, type DiceFactoryConfig, create3DDiceRoll } from './factory';
+export { DiceFactory, type DiceFactoryConfig, create3DDiceRoll, prepareDiceGeometries } from './factory';
+export { startPhysicsRoll, disposeSharedRenderer } from './renderer-pool';

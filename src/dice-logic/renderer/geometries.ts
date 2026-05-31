@@ -360,6 +360,8 @@ export default abstract class DiceGeometry {
                 new MeshPhongMaterial(
                     Object.assign({}, MATERIAL_OPTIONS, {
                         map: texture,
+                        transparent: true,
+                        opacity: 1.0,
                     }),
                 ),
             );
@@ -817,7 +819,11 @@ export class D4DiceGeometry extends DiceGeometry {
 
             materials.push(
                 new MeshPhongMaterial(
-                    Object.assign({}, MATERIAL_OPTIONS, { map: texture }),
+                    Object.assign({}, MATERIAL_OPTIONS, {
+                        map: texture,
+                        transparent: true,
+                        opacity: 1.0,
+                    }),
                 ),
             );
         }

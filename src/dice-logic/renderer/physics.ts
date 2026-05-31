@@ -15,6 +15,7 @@ export class PhysicsWorld {
     deskMaterial: Material;
     barrierMaterial: Material;
     lastCallTime = 0;
+    private barriers: Body[] = [];
 
     constructor(public WIDTH: number, public HEIGHT: number) {
         // Use stronger gravity so dice hit the table quickly but stay in view
@@ -65,46 +66,41 @@ export class PhysicsWorld {
 
         ground.quaternion.setFromAxisAngle(new Vec3(1, 0, 0), 0);
         this.world.addBody(ground);
+    }
 
-        let barrier = new Body({
+    updateBarriers(cameraZ: number, fovDeg: number, aspect: number): void {
+        this.barriers.forEach(b => this.world.removeBody(b));
+        this.barriers = [];
+
+        const fovRad = (fovDeg * Math.PI) / 180;
+        const visibleHeight = 2 * cameraZ * Math.tan(fovRad / 2);
+        const visibleWidth = visibleHeight * aspect;
+
+        // Barriers at 90% of visible area so dice stay on-screen with some margin
+        const limitX = (visibleWidth / 2) * 0.9;
+        const limitY = (visibleHeight / 2) * 0.9;
+
+        const wallConfig = {
             allowSleep: false,
             mass: 0,
             shape: new Plane(),
             material: this.barrierMaterial,
-        });
-        barrier.quaternion.setFromAxisAngle(new Vec3(1, 0, 0), Math.PI / 2);
-        barrier.position.set(0, this.HEIGHT / 2 * 0.97, 0);
-        this.world.addBody(barrier);
+        };
 
-        barrier = new Body({
-            allowSleep: false,
-            mass: 0,
-            shape: new Plane(),
-            material: this.barrierMaterial,
-        });
-        barrier.quaternion.setFromAxisAngle(new Vec3(1, 0, 0), -Math.PI / 2);
-        barrier.position.set(0, -this.HEIGHT / 2 * 0.97, 0);
-        this.world.addBody(barrier);
+        const walls = [
+            { quat: [1, 0, 0], angle: Math.PI / 2, pos: [0, limitY, 0] },
+            { quat: [1, 0, 0], angle: -Math.PI / 2, pos: [0, -limitY, 0] },
+            { quat: [0, 1, 0], angle: -Math.PI / 2, pos: [limitX, 0, 0] },
+            { quat: [0, 1, 0], angle: Math.PI / 2, pos: [-limitX, 0, 0] },
+        ];
 
-        barrier = new Body({
-            allowSleep: false,
-            mass: 0,
-            shape: new Plane(),
-            material: this.barrierMaterial,
-        });
-        barrier.quaternion.setFromAxisAngle(new Vec3(0, 1, 0), -Math.PI / 2);
-        barrier.position.set(this.WIDTH / 2 * 0.97, 0, 0);
-        this.world.addBody(barrier);
-
-        barrier = new Body({
-            allowSleep: false,
-            mass: 0,
-            shape: new Plane(),
-            material: this.barrierMaterial,
-        });
-        barrier.quaternion.setFromAxisAngle(new Vec3(0, 1, 0), Math.PI / 2);
-        barrier.position.set(-this.WIDTH / 2 * 0.97, 0, 0);
-        this.world.addBody(barrier);
+        for (const wall of walls) {
+            const body = new Body(wallConfig);
+            body.quaternion.setFromAxisAngle(new Vec3(wall.quat[0], wall.quat[1], wall.quat[2]), wall.angle);
+            body.position.set(wall.pos[0], wall.pos[1], wall.pos[2]);
+            this.world.addBody(body);
+            this.barriers.push(body);
+        }
     }
 
     add(...dice: DiceShape[]): void {

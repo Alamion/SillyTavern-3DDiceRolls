@@ -9,7 +9,7 @@ export function registerRollCommand(): void {
         warn('Context not available - /roll command disabled', 'Dice Roller');
         return;
     }
-    const { SlashCommandParser, SlashCommand, SlashCommandArgument, ARGUMENT_TYPE } = context;
+    const { SlashCommandParser, SlashCommand, SlashCommandArgument, SlashCommandNamedArgument, ARGUMENT_TYPE } = context;
     if (!SlashCommandParser) {
         warn('Slash command parser not available - /roll command disabled', 'Dice Roller');
         return;
@@ -19,16 +19,26 @@ export function registerRollCommand(): void {
         const slashCommand = SlashCommand?.fromProps({
             name: 'roll',
             aliases: ['r'],
-            callback: async (args: string, value: string): Promise<string> => {
-                const notation = value || args || '1d20';
-                const result = await handleRollEvent({ notation });
+            callback: async (_args: Record<string, string>, value: string): Promise<string> => {
+                const quiet = String(_args?.quiet) === 'true';
+                const notation = value || '1d20';
+                const result = await handleRollEvent({ notation, quiet });
                 if (!result) {
                     return `Failed to roll notation: ${notation}. Invalid notation.`;
                 }
                 return String(result.total);
             },
-            helpString: 'Roll dice (e.g., /roll 2d6+2)',
+            helpString: 'Roll dice (e.g., /roll 2d6+2). Use quiet=true to suppress output.',
             returns: 'roll result',
+            namedArgumentList: [
+                SlashCommandNamedArgument?.fromProps({
+                    name: 'quiet',
+                    description: 'Suppress output',
+                    isRequired: false,
+                    typeList: [ARGUMENT_TYPE?.BOOLEAN],
+                    defaultValue: String(false),
+                }),
+            ],
             unnamedArgumentList: [
                 SlashCommandArgument?.fromProps({
                     description: 'dice formula, e.g. 2d6',

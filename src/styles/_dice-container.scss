@@ -2,9 +2,9 @@
 
 #ddr-dices-container {
     position: absolute;
-    top: 20px;
+    top: 35px;
     left: 20px;
-    z-index: 3006;
+    z-index: 3000;
 
     @media screen and (max-width: 1000px) {
         top: 40px;

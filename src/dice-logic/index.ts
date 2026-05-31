@@ -1,4 +1,7 @@
 export * from './types';
-export * from './dice-parser';
-export * from './dice-roller';
+export { tokenize } from './dice-lexer';
+export type { LexerToken } from './dice-lexer';
+export { parseToAST, parseDiceNotation, validateNotation, PRECEDENCE } from './dice-parser';
+export { evaluateDiceAST, extractRawValuesFromAST, getRawDiceValues, detectRerolls, detectExplosion } from './dice-evaluator';
+export { rollDices, onRollResult, notifyRollResult, formatResultForDisplay, validateNotation as validateRollNotation } from './dice-roller';
 export * from './roll-orchestrator';

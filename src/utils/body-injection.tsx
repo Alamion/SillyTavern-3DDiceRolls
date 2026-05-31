@@ -197,8 +197,12 @@ export function destroyBodyUI(): void {
 }
 
 function createSettingsUI(): void {
-    const rootContainer = document.getElementById('extensions_settings');
-    if (rootContainer) {
+    try {
+        const rootContainer = document.getElementById('extensions_settings');
+        if (!rootContainer) {
+            warn('Extensions settings container not found', 'Settings UI');
+            return;
+        }
         const rootElement = document.createElement('div');
         rootElement.id = '3d-dice-rolls-settings';
         rootContainer.appendChild(rootElement);
@@ -207,6 +211,8 @@ function createSettingsUI(): void {
         root.render(
             <SettingsPanel />,
         );
+    } catch (err) {
+        error('Failed to create settings UI', 'Settings UI', [err]);
     }
 }
 

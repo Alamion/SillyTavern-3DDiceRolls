@@ -11,10 +11,11 @@ export const DICE_ROLL_EVENT_NAME = '3ddicerolls:roll';
 
 export interface DiceRollEventPayload {
     notation: string;
+    quiet?: boolean;
 }
 
 export async function handleRollEvent(payload: DiceRollEventPayload): Promise<RollResult | null> {
-    const { notation } = payload;
+    const { notation, quiet } = payload;
 
     if (!notation) {
         warn('Roll event received without notation', 'Event Handler');
@@ -30,7 +31,9 @@ export async function handleRollEvent(payload: DiceRollEventPayload): Promise<Ro
             ? await executeUnifiedRoll(notation, getRollConfig())
             : execute2DRoll(notation);
 
-        notifyRollResult(result);
+        if (!quiet) {
+            notifyRollResult(result);
+        }
         return result;
     } catch (err) {
         error('Roll event failed to execute', 'Event Handler', [err]);

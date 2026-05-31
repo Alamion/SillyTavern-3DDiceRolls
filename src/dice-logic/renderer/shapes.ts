@@ -53,7 +53,7 @@ export abstract class DiceShape {
     geometry: Mesh<BufferGeometry, Material | Material[]>;
     values: number[] = [];
 
-    stopped: boolean | number = false;
+    stopped: boolean = false;
     staleIterations = 0;
 
     vector!: DiceVector;
@@ -173,10 +173,9 @@ export abstract class DiceShape {
             const group = groups[i];
             const matIdx = group.materialIndex ?? 0;
 
-            // Skip material index 0 (blank label) and 1 (usually '0' label for non-d10, or space for d10)
-            // Material 0 corresponds to original index -1 (bottom faces on d10)
-            // We only want to consider actual numbered faces
-            if (matIdx < 2) {
+            // Skip material index 0 (blank label for triangular connecting faces).
+            // Material 1 is the '0'/'00' face on d10/d100 and must be included.
+            if (matIdx < 1) {
                 // debug(`  Skipping group ${i}: materialIndex ${matIdx} is a border/blank face`)
                 continue;
             }
@@ -252,7 +251,7 @@ export abstract class DiceShape {
             return fallbackValue;
         }
 
-        let closestMatIndex = 2;
+        let closestMatIndex = 1;
         let closestAngle = Math.PI * 2;
 
         for (const [matIndex, data] of materialNormals) {
@@ -262,10 +261,10 @@ export abstract class DiceShape {
             }
         }
 
-        // Map material index (which is offset due to how geometry groups are built)
-        // back to a value index. Material indices 2+ correspond to actual numbered faces.
-        // Material 2 -> values[0], Material 3 -> values[1], etc.
-        const faceIndex = closestMatIndex - 2;
+        // Map material index back to a value index.
+        // For d10/d100: mat 1 (label '0'/'00') wraps to the last value (10).
+        // For other dice: mat 2+ maps linearly with modulo wrapping.
+        const faceIndex = (closestMatIndex - 2 + this.values.length) % this.values.length;
         let result: number;
 
         if (faceIndex >= 0 && faceIndex < this.values.length) {
@@ -311,6 +310,19 @@ export abstract class DiceShape {
         this.geometry.quaternion.set(quat.x, quat.y, quat.z, quat.w);
     }
 
+    setOpacity(opacity: number): void {
+        const materials = Array.isArray(this.geometry.material)
+            ? this.geometry.material
+            : [this.geometry.material];
+
+        for (const material of materials) {
+            if (material) {
+                material.opacity = opacity;
+                material.transparent = true;
+            }
+        }
+    }
+
     recreate(vector: { x: number; y: number }, width: number, height: number): void {
         this.w = width;
         this.h = height;
@@ -346,6 +358,7 @@ export abstract class DiceShape {
         );
         this.body.linearDamping = 0.1;
         this.body.angularDamping = 0.1;
+        this.body.wakeUp();
 
         debug('DiceShape created:', this.body);
     }

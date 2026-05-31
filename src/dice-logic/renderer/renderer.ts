@@ -4,6 +4,7 @@ import { PhysicsWorld } from './physics';
 import { DiceShape, createDiceShape } from './shapes';
 import type { DiceGeometryData } from './geometries';
 import { debug } from '../../utils/logging';
+import { MAX_ROLL_SECONDS, VELOCITY_THRESHOLD, FRAME_RATE } from '../../utils/constants';
 
 export interface DiceRendererConfig {
     diceColor: string
@@ -11,35 +12,59 @@ export interface DiceRendererConfig {
     scaler: number
 }
 
-export type RollCompleteCallback = (results: number[]) => void
+type SessionPhase =
+    | 'physics'
+    | 'exploding'
+    | 'waiting_reroll'
+    | 'arranging'
+    | 'showing'
+    | 'fading'
+    | 'complete';
+
+interface RollSession {
+    id: number;
+    dice: DiceShape[];
+    phase: SessionPhase;
+    groupSizes: number[];
+    settleResolve: ((values: number[]) => void) | null;
+    settleReject: ((err: Error) => void) | null;
+    lockedIndices: Set<number>;
+    iterations: number;
+    currentIterations: number;
+    showFrames: number;
+    fadeFrames: number;
+    allStopped: boolean;
+    isAnimating: boolean;
+    tracker: ResourceTracker;
+}
 
 export class DiceRenderer {
     private sceneManager: SceneManager;
     private physicsWorld: PhysicsWorld;
-    private tracker = new ResourceTracker();
-    private dice: DiceShape[] = [];
-    private isAnimating = false;
-    private animationId: number | null = null;
-    private iterations = 0;
-    private onComplete: RollCompleteCallback | null = null;
+    private sessions: RollSession[] = [];
+    private nextSessionId = 0;
 
-    private readonly frameRate = 1 / 60;
-    private readonly velocityThreshold = 5;
-    private allStopped = false;
-    private maxRollSecs = 10;
-    private showFrames = 60;
-    private fadeFrames = 60;
+    private readonly frameRate = FRAME_RATE;
+    private readonly velocityThreshold = VELOCITY_THRESHOLD;
+    private maxRollSecs = MAX_ROLL_SECONDS;
 
     private container: HTMLDivElement;
+    private animationId: number | null = null;
+    private isRunning = false;
 
     private width: number;
     private height: number;
 
+    private resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+    private boundResizeHandler: () => void;
+    private config: DiceRendererConfig;
+
     constructor(
         width: number,
         height: number,
-        _config: DiceRendererConfig,
+        config: DiceRendererConfig,
     ) {
+        this.config = config;
         debug('DiceRenderer: Creating renderer with dimensions', width, height);
         this.container = document.createElement('div');
         this.container.className = 'ddr-dice-renderer-container';
@@ -55,145 +80,371 @@ export class DiceRenderer {
         const isDevelopment = process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== undefined;
         if (isDevelopment) {
             this.container.style.cssText += `
-                background-color: #333333;
+                background-color: #333333CC;
             `;
         }
         document.body.appendChild(this.container);
-        debug('DiceRenderer: Container created and appended to body');
 
         this.sceneManager = new SceneManager();
         this.container.appendChild(this.sceneManager.renderer.domElement);
-        debug('DiceRenderer: SceneManager created, canvas appended');
 
-        this.physicsWorld = new PhysicsWorld(
-            width,
-            height,
-        );
-        debug('DiceRenderer: PhysicsWorld created');
+        this.physicsWorld = new PhysicsWorld(width, height);
 
         this.sceneManager.initScene(width, height);
-        debug('DiceRenderer: Scene initialized with dimensions', width, height);
+
+        const camInfo = this.sceneManager.getCameraInfo();
+        if (camInfo) {
+            this.physicsWorld.updateBarriers(camInfo.z, camInfo.fov, camInfo.aspect);
+        }
 
         this.width = width;
         this.height = height;
+
+        this.boundResizeHandler = this.handleResize.bind(this);
+        window.addEventListener('resize', this.boundResizeHandler);
     }
 
-    addDice(diceShapes: DiceShape[]): void {
+    private handleResize(): void {
+        if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+        }
+        this.resizeTimeout = setTimeout(() => {
+            const newW = window.innerWidth;
+            const newH = window.innerHeight;
+            this.width = newW;
+            this.height = newH;
+            this.container.style.width = `${newW}px`;
+            this.container.style.height = `${newH}px`;
+            this.physicsWorld = new PhysicsWorld(newW, newH);
+            this.sceneManager.initScene(newW, newH);
+
+            const camInfo = this.sceneManager.getCameraInfo();
+            if (camInfo) {
+                this.physicsWorld.updateBarriers(camInfo.z, camInfo.fov, camInfo.aspect);
+            }
+        }, 200);
+    }
+
+    private addDiceToScene(diceShapes: DiceShape[], tracker: ResourceTracker): void {
         for (const shape of diceShapes) {
-            this.tracker.track(shape.geometry);
+            tracker.track(shape.geometry);
             this.sceneManager.add(shape.geometry);
             this.physicsWorld.add(shape);
-            this.dice.push(shape);
         }
     }
 
-    roll(diceData: DiceGeometryData[], onComplete: RollCompleteCallback): void {
-        debug('DiceRenderer: Starting roll with', diceData.length, 'dice');
-        if (this.isAnimating) {
-            this.stop();
+    private removeDiceFromScene(diceShapes: DiceShape[], tracker: ResourceTracker): void {
+        for (const shape of diceShapes) {
+            this.sceneManager.remove(shape.geometry);
+            this.physicsWorld.remove(shape);
         }
+        tracker.dispose();
+    }
 
-        this.onComplete = onComplete;
-        this.clearDice();
+    private getRandomVector(): { x: number; y: number } {
+        return {
+            x: (Math.random() * 2 - 1) * this.sceneManager.WIDTH / 2,
+            y: -(Math.random() * 2 - 1) * this.sceneManager.HEIGHT / 2,
+        };
+    }
 
+    private showLoading(): void {
+        let el = this.container.querySelector('.ddr-loading');
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'ddr-loading';
+            (el as HTMLElement).style.setProperty('--ddr-loader-color', this.config.diceColor);
+            this.container.appendChild(el);
+        }
+    }
+
+    private hideLoading(): void {
+        const el = this.container.querySelector('.ddr-loading');
+        if (el) el.remove();
+    }
+
+    startRoll(
+        diceData: DiceGeometryData[],
+        groupSizes: number[],
+    ): Promise<number[]> {
+        debug('DiceRenderer: Starting new roll session with', diceData.length, 'dice');
+
+        this.showLoading();
+
+        const sessionId = this.nextSessionId++;
         const vector = this.getRandomVector();
-
         const diceShapes: DiceShape[] = [];
 
         for (const data of diceData) {
             const sides = data.values.length;
-            const dice = createDiceShape(
-                sides,
-                this.width,
-                this.height,
-                data,
-                vector,
-            );
-
+            const dice = createDiceShape(sides, this.width, this.height, data, vector);
             diceShapes.push(dice);
         }
 
-        this.addDice(diceShapes);
-        debug('DiceRenderer: Added', diceShapes.length, 'dice to scene');
-        this.start();
+        this.sceneManager.initCamera(diceData.length);
+
+        const camInfo = this.sceneManager.getCameraInfo();
+        if (camInfo) {
+            this.physicsWorld.updateBarriers(camInfo.z, camInfo.fov, camInfo.aspect);
+        }
+
+        const tracker = new ResourceTracker();
+        this.addDiceToScene(diceShapes, tracker);
+
+        let settleResolve: ((values: number[]) => void) | null = null;
+        let settleReject: ((err: Error) => void) | null = null;
+        const settlePromise = new Promise<number[]>((resolve, reject) => {
+            settleResolve = resolve;
+            settleReject = reject;
+        });
+
+        const session: RollSession = {
+            id: sessionId,
+            dice: diceShapes,
+            phase: 'physics',
+            groupSizes,
+            settleResolve,
+            settleReject,
+            lockedIndices: new Set(),
+            iterations: 0,
+            currentIterations: 0,
+            showFrames: 60,
+            fadeFrames: 60,
+            allStopped: false,
+            isAnimating: true,
+            tracker,
+        };
+
+        this.sessions.push(session);
+
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.animate();
+        }
+
+        return settlePromise;
     }
 
-    private reportDice(): void {
-        const die = this.dice[0];
-        debug(`Frame ${this.iterations}: Die pos=(${die.body.position.x.toFixed(1)}, ${die.body.position.y.toFixed(1)}, ${die.body.position.z.toFixed(1)}), vel=${die.body.velocity.length().toFixed(1)}, angVel=${die.body.angularVelocity.length().toFixed(1)}, quaternion=${die.body.quaternion.x.toFixed(1)}, ${die.body.quaternion.y.toFixed(1)}, ${die.body.quaternion.z.toFixed(1)}, ${die.body.quaternion.w.toFixed(1)}`);
+    lockDice(flatIndices: number[]): void {
+        const activeSession = this.sessions[this.sessions.length - 1];
+        if (!activeSession) return;
+        for (const idx of flatIndices) {
+            activeSession.lockedIndices.add(idx);
+            const die = activeSession.dice[idx];
+            if (die) {
+                die.body.velocity.set(0, 0, 0);
+                die.body.angularVelocity.set(0, 0, 0);
+                die.body.updateMassProperties();
+            }
+        }
     }
 
-    private start(): void {
-        this.isAnimating = true;
-        this.iterations = 0;
-        this.showFrames = 60;
-        this.allStopped = false;
-        this.fadeFrames = 60;
-        this.container.style.opacity = '1';
-        debug('DiceRenderer: Animation started');
-        this.animate();
+    rethrowDice(flatIndices: number[]): Promise<number[]> {
+        const activeSession = this.sessions[this.sessions.length - 1];
+        if (!activeSession) {
+            return Promise.reject(new Error('No active session'));
+        }
+
+        for (const idx of flatIndices) {
+            activeSession.lockedIndices.delete(idx);
+            const die = activeSession.dice[idx];
+            if (die) {
+                const vector = this.getRandomVector();
+                die.recreate(vector, this.width, this.height);
+            }
+        }
+
+        let settleResolve: ((values: number[]) => void) | null = null;
+        let settleReject: ((err: Error) => void) | null = null;
+        const settlePromise = new Promise<number[]>((resolve, reject) => {
+            settleResolve = resolve;
+            settleReject = reject;
+        });
+
+        activeSession.settleResolve = settleResolve;
+        activeSession.settleReject = settleReject;
+        activeSession.phase = 'waiting_reroll';
+        activeSession.allStopped = false;
+        activeSession.currentIterations = 0;
+
+        return settlePromise;
     }
 
-    private stop(): void {
-        debug('DiceRenderer: Animation stopped after', this.iterations, 'iterations');
-        this.isAnimating = false;
+    addDice(extraDiceData: DiceGeometryData[]): Promise<number[]> {
+        const activeSession = this.sessions[this.sessions.length - 1];
+        if (!activeSession) {
+            return Promise.reject(new Error('No active session'));
+        }
+
+        const startIndex = activeSession.dice.length;
+        const vector = this.getRandomVector();
+        const newDice: DiceShape[] = [];
+
+        for (const data of extraDiceData) {
+            const sides = data.values.length;
+            const dice = createDiceShape(sides, this.width, this.height, data, vector);
+            newDice.push(dice);
+        }
+
+        this.addDiceToScene(newDice, activeSession.tracker);
+        activeSession.dice.push(...newDice);
+
+        let settleResolve: ((values: number[]) => void) | null = null;
+        let settleReject: ((err: Error) => void) | null = null;
+        const settlePromise = new Promise<number[]>((resolve, reject) => {
+            settleResolve = (values) => resolve(values.slice(startIndex));
+            settleReject = reject;
+        });
+
+        activeSession.settleResolve = settleResolve;
+        activeSession.settleReject = settleReject;
+        activeSession.phase = 'exploding';
+        activeSession.allStopped = false;
+        activeSession.currentIterations = 0;
+
+        return settlePromise;
+    }
+
+    readFlatValues(): number[] {
+        const activeSession = this.sessions[this.sessions.length - 1];
+        if (!activeSession) return [];
+        return activeSession.dice.map(d => d.result);
+    }
+
+    arrangeAndDismiss(): void {
+        const activeSession = this.sessions[this.sessions.length - 1];
+        if (!activeSession) return;
+
+        activeSession.phase = 'arranging';
+    }
+
+    private resolveSettle(session: RollSession): void {
+        const values = session.dice.map(d => d.result);
+        if (session.settleResolve) {
+            session.settleResolve(values);
+            session.settleResolve = null;
+            session.settleReject = null;
+        }
+    }
+
+    private completeSession(session: RollSession): void {
+        debug(`DiceRenderer: Completing session ${session.id} after ${session.iterations} iterations`);
+
+        this.hideLoading();
+
+        session.isAnimating = false;
+
+        const results = session.dice.map(d => d.result);
+
+        if (session.settleResolve) {
+            session.settleResolve(results);
+            session.settleResolve = null;
+            session.settleReject = null;
+        }
+
+        this.removeDiceFromScene(session.dice, session.tracker);
+
+        this.sceneManager.render();
+
+        this.sessions = this.sessions.filter(s => s.id !== session.id);
+
+        if (this.sessions.length === 0) {
+            this.stopAnimationLoop();
+        }
+    }
+
+    private stopAnimationLoop(): void {
+        this.isRunning = false;
         if (this.animationId !== null) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
-
-        if (this.onComplete) {
-            const results = this.dice.map((d) => d.result);
-            debug('DiceRenderer: Roll complete with results:', results);
-            this.onComplete(results);
-            this.onComplete = null;
-        }
     }
 
     private animate(): void {
-        if (!this.isAnimating) return;
+        if (!this.isRunning) return;
 
-        if (this.allStopped || this.checkRollFinished()) {
-            this.allStopped = true;
-            if (this.showFrames > 0) {
-                this.showFrames--;
-            } else if (this.fadeFrames > 0) {
-                const progress = this.fadeFrames / 60;
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-                this.container.style.opacity = easeOut.toString();
-                this.fadeFrames--;
-            } else {
-                this.stop();
-                setTimeout(() => this.dispose(), 1000);
-                return;
+        for (const session of this.sessions) {
+            if (!session.isAnimating) continue;
+
+            switch (session.phase) {
+                case 'physics':
+                case 'exploding':
+                case 'waiting_reroll':
+                    if (this.checkRollFinished(session)) {
+                        session.allStopped = true;
+                        this.resolveSettle(session);
+                        session.phase = session.phase === 'physics' ? 'showing' : 'arranging';
+                    }
+                    break;
+
+                case 'arranging':
+                    this.resolveSettle(session);
+                    session.phase = 'showing';
+                    break;
+
+                case 'showing':
+                    if (session.allStopped) {
+                        session.showFrames--;
+                        if (session.showFrames <= 0) {
+                            session.phase = 'fading';
+                        }
+                    } else if (this.checkRollFinished(session)) {
+                        session.allStopped = true;
+                        this.resolveSettle(session);
+                    }
+                    break;
+
+                case 'fading':
+                    if (session.fadeFrames > 0) {
+                        const progress = session.fadeFrames / 60;
+                        const easeOut = 1 - Math.pow(1 - progress, 3);
+                        for (const die of session.dice) {
+                            die.setOpacity(easeOut);
+                        }
+                        session.fadeFrames--;
+                    } else {
+                        this.completeSession(session);
+                        continue;
+                    }
+                    break;
+
+                case 'complete':
+                    this.completeSession(session);
+                    continue;
+            }
+
+            session.iterations++;
+            session.currentIterations++;
+
+            for (const die of session.dice) {
+                die.set();
             }
         }
 
-        this.animationId = requestAnimationFrame(() => this.animate());
-
-        this.physicsWorld.step(this.frameRate);
-        this.iterations++;
-
-        for (const die of this.dice) {
-            die.set();
+        if (this.sessions.length > 0) {
+            this.physicsWorld.step(this.frameRate);
+            this.sceneManager.render();
+            this.animationId = requestAnimationFrame(() => this.animate());
+        } else {
+            this.stopAnimationLoop();
         }
-
-        // Check every 60 frames if all dice have stopped moving (velocity < 1)
-        if (this.iterations % 60 === 0 && this.dice.length > 0) {
-            if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== undefined) {
-                this.reportDice();
-            }
-        }
-
-        this.sceneManager.render();
     }
 
-    private checkRollFinished(): boolean {
+    private checkRollFinished(session: RollSession): boolean {
         let allStoppedNow = true;
 
-        for (const die of this.dice) {
-            if (this.iterations > this.maxRollSecs / this.frameRate) {
-                debug('Animation timeout for die');
+        for (let i = 0; i < session.dice.length; i++) {
+            const die = session.dice[i];
+
+            if (session.lockedIndices.has(i)) {
+                die.body.velocity.set(0, 0, 0);
+                die.body.angularVelocity.set(0, 0, 0);
+                continue;
+            }
+
+            if (session.currentIterations > this.maxRollSecs / this.frameRate) {
+                debug(`Session ${session.id}: Animation timeout for die ${i}`);
                 die.stopped = true;
                 continue;
             }
@@ -206,7 +457,7 @@ export class DiceRenderer {
                 v.length() < this.velocityThreshold
             ) {
                 die.staleIterations++;
-                if (this.iterations - die.staleIterations > 5) {
+                if (session.iterations - die.staleIterations > 5) {
                     die.stopped = true;
                 }
             } else {
@@ -222,26 +473,16 @@ export class DiceRenderer {
         return allStoppedNow;
     }
 
-    private getRandomVector(): { x: number; y: number } {
-        debug('DiceRenderer: Generating random vector from', this.width, this.height);
-        return {
-            x: (Math.random() * 2 - 1) * this.sceneManager.WIDTH / 2,
-            y: -(Math.random() * 2 - 1) * this.sceneManager.HEIGHT / 2,
-        };
-    }
-
-    private clearDice(): void {
-        for (const die of this.dice) {
-            this.sceneManager.remove(die.geometry);
-            this.physicsWorld.remove(die);
-        }
-        this.dice = [];
-        this.tracker.dispose();
-    }
-
     dispose(): void {
-        this.stop();
-        this.clearDice();
+        if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+        }
+        window.removeEventListener('resize', this.boundResizeHandler);
+        for (const session of this.sessions) {
+            this.removeDiceFromScene(session.dice, session.tracker);
+        }
+        this.sessions = [];
+        this.stopAnimationLoop();
         this.sceneManager.dispose();
         this.container.remove();
     }

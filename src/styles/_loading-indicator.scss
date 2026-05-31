@@ -1,0 +1,26 @@
+.ddr-loading {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 24px;
+    height: 24px;
+    z-index: 10000;
+    pointer-events: none;
+
+    &::after {
+        content: '';
+        display: block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid transparent;
+        border-top-color: var(--ddr-loader-color, #7e7e7e);
+        border-radius: 50%;
+        animation: ddr-spin 0.6s linear infinite;
+    }
+}
+
+@keyframes ddr-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

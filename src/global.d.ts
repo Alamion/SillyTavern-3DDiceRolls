@@ -72,6 +72,9 @@ export interface SillyTavernContext {
     SlashCommandArgument?: {
         fromProps: (props: Record<string, unknown>) => Record<string, unknown>;
     };
+    SlashCommandNamedArgument?: {
+        fromProps: (props: Record<string, unknown>) => Record<string, unknown>;
+    };
     ARGUMENT_TYPE: {
         [key: string]: string;
     };
