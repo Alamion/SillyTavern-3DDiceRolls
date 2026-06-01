@@ -1,6 +1,6 @@
-import { tokenize, LexerToken } from './dice-lexer';
-import type { ASTNode, ComparePoint, DiceModifiers, TokenType } from './types';
-import { debug, warn } from '../utils/logging';
+import {LexerToken, tokenize} from './dice-lexer';
+import type {ASTNode, ComparePoint, DiceModifiers, TokenType} from './types';
+import {debug, warn} from '../utils/logging';
 
 const PRECEDENCE: Record<string, number> = {
     '^': 4,
@@ -139,6 +139,11 @@ function parsePrimary(stream: TokenStream): ASTNode {
         stream.consume();
         const operand = parsePrimary(stream);
         return { type: 'UnaryOp', operator: '-', operand };
+    }
+
+    if (token.type === 'END') {
+        stream.consume();
+        return { type: 'NumericLiteral', value: 0 };
     }
 
     warn(`Unexpected token: ${token.type} (${token.text})`, 'Parser');
@@ -360,8 +365,7 @@ export function parseToAST(input: string): ASTNode {
     const tokens = tokenize(input);
     debug('Tokens:', tokens.map(t => ({ type: t.type, text: t.text })));
     const stream = new TokenStream(tokens);
-    const ast = parseExpression(stream);
-    return ast;
+    return parseExpression(stream);
 }
 
 export function parseDiceNotation(notation: string): { expressions: Array<{ type: 'dice' | 'number'; value: unknown; operation: '+' | '-' | '*' | '/' | '%' | '^' }>; original: string } {

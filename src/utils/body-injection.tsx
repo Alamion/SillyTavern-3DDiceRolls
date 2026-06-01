@@ -122,8 +122,7 @@ function injectResult(result: import('../dice-logic').RollResult): void {
     const userInput = document.querySelector<HTMLTextAreaElement>('#send_textarea');
     if (!userInput) return;
     const currentValue = userInput.value;
-    const newValue = currentValue ? `${currentValue}\n${result.formatted}` : result.formatted;
-    userInput.value = newValue;
+    userInput.value = currentValue ? `${currentValue}\n${result.formatted}` : result.formatted;
     userInput.dispatchEvent(new Event('input', { bubbles: true }));
 }
 

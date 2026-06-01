@@ -1,13 +1,13 @@
-﻿import { parseToAST } from './dice-parser';
-import { evaluateDiceAST, detectRerolls, detectExplosion, detectUnique } from './dice-evaluator';
-import { prepareDiceGeometries } from './renderer';
-import { startPhysicsRoll } from './renderer';
-import type { ASTNode, DiceGroupNode, DiceRoll, RollResult } from './types';
-import { buildGroupKey } from './utils';
-import { debug, warn } from '../utils/logging';
-import { MixedRollConfig } from '../utils/settings';
+﻿import {parseToAST} from './dice-parser';
+import {detectExplosion, detectRerolls, detectUnique, evaluateDiceAST} from './dice-evaluator';
+import {prepareDiceGeometries, startPhysicsRoll} from './renderer';
+import type {ASTNode, DiceGroupNode, DiceRoll, RollResult} from './types';
+import {buildGroupKey} from './utils';
+import {debug, warn} from '../utils/logging';
+import {MixedRollConfig} from '../utils/settings';
 
 const SUPPORTED_3D_SIDES = new Set([2, 4, 6, 8, 10, 12, 20, 100]);
+const FUDGE_LABEL_MAP: Record<number, string> = { [-1]: '-', [0]: ' ', [1]: '+' };
 
 function has3DSupportedDice(ast: ASTNode): boolean {
     let found = false;
@@ -118,9 +118,11 @@ export async function executeUnifiedRoll(
                         dropped: false,
                     });
                 } else {
+                    const val = flatValues[flatOffset + d];
                     allGroupRolls.push({
                         sides: group.sides,
-                        value: flatValues[flatOffset + d],
+                        value: val,
+                        faceLabel: group.fudge ? (FUDGE_LABEL_MAP[val] ?? String(val)) : undefined,
                         dropped: false,
                     });
                 }
@@ -295,8 +297,7 @@ export async function executeUnifiedRoll(
 
         handle.arrangeAndDismiss();
 
-        const result = evaluateDiceAST(ast, notation, preGeneratedValues);
-        return result;
+        return evaluateDiceAST(ast, notation, preGeneratedValues);
 
     } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);

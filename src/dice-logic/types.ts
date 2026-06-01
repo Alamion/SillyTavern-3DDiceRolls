@@ -159,6 +159,7 @@ export interface DiceRoll {
     minRaised?: boolean
     maxCapped?: boolean
     rerolledOnce?: boolean
+    faceLabel?: string
 }
 
 export interface DiceGroupResult {

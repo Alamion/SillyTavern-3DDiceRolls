@@ -84,6 +84,6 @@ export function SvgImage({
 export function useDiceColors(primaryColor: string, shades: number[]) {
     return useMemo(() =>
         shades.map(shade => blendColors(primaryColor, '#000000', shade)),
-    [primaryColor, JSON.stringify(shades)],
+    [primaryColor, shades],
     );
 }

@@ -12,7 +12,13 @@ import {
 } from './geometries';
 import { type DiceRendererConfig } from './renderer';
 
-type DiceGeometryClass = new (w: number, h: number, options: { diceColor: string; textColor: string }, scaler: number) => { create(): { clone(): DiceGeometryData }; values: number[] };
+interface DiceGeometryInstance {
+    create(): { clone(): DiceGeometryData }
+    values: number[]
+    labels: string[]
+}
+
+type DiceGeometryClass = new (w: number, h: number, options: { diceColor: string; textColor: string }, scaler: number) => DiceGeometryInstance;
 
 const GEOMETRY_CLASSES: Record<number, DiceGeometryClass> = {
     2: D2DiceGeometry,
@@ -34,6 +40,7 @@ export interface DiceFactoryConfig extends DiceRendererConfig {
 function getOrCreateGeometry(
     sides: number,
     config: DiceFactoryConfig,
+    fudge?: boolean,
 ): DiceGeometryData | null {
     const GeometryClass = GEOMETRY_CLASSES[sides];
     if (!GeometryClass) {
@@ -46,13 +53,30 @@ function getOrCreateGeometry(
     };
 
     const g = new GeometryClass(window.innerWidth, window.innerHeight, options, config.scaler);
+
+    if (fudge) {
+        // Override face labels for fudge symbols ('-', '0', '+') on a D6 cube
+        // Material array indices: 0=edge, 1=unused, 2-7=six faces
+        g.labels[2] = '-';
+        g.labels[3] = '0';
+        g.labels[4] = '+';
+        g.labels[5] = '-';
+        g.labels[6] = '0';
+        g.labels[7] = '+';
+        g.values = [-1, 0, 1, -1, 0, 1];
+    }
+
     const created = g.create();
     if (!created) {
         return null;
     }
     const geom = created.clone();
 
-    geom.values = geom.values.map(v => v + 1);
+    if (fudge) {
+        geom.values = g.values;
+    } else {
+        geom.values = geom.values.map(v => v + 1);
+    }
 
     return geom;
 }
@@ -83,7 +107,7 @@ export function prepareDiceGeometries(
             // For d100, alternate: tens die (i%2==0) uses D100DiceGeometry (face labels 00-90),
             // ones die (i%2==1) uses D10DiceGeometry (face labels 0-9).
             const effectiveSides = isD100 && i % 2 === 0 ? 100 : physicalSides;
-            const geometry = getOrCreateGeometry(effectiveSides, factoryConfig);
+            const geometry = getOrCreateGeometry(effectiveSides, factoryConfig, group.fudge);
             if (geometry) {
                 geometries.push(geometry);
             }

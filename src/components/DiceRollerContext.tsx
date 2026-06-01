@@ -1,13 +1,10 @@
-import {
-    createContext, useContext, useState, useCallback, useEffect, useRef,
-    type ReactNode,
-} from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { DiceRollerSettings } from '../utils/settings';
-import { getSettings, subscribeSettings, getContext } from '../utils/settings';
+import { getContext, getSettings, subscribeSettings } from '../utils/settings';
 import { handleRollEvent } from '../utils/events';
 import { onRollResult } from '../dice-logic';
 import { MODULE_NAME } from '../utils/constants';
-import type { HistoryEntry, FavoriteNotation, HistoryTabType } from '../utils/types-ext';
+import type { FavoriteNotation, HistoryEntry, HistoryTabType } from '../utils/types-ext';
 
 const MAX_HISTORY = 50;
 const MAX_RECENT_NOTATIONS = 10;
@@ -149,8 +146,7 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
 
         /* Update recent notations (global) */
         setRecentNotations(prev => {
-            const updated = [result.notation, ...prev.filter(n => n !== result.notation)].slice(0, MAX_RECENT_NOTATIONS);
-            return updated;
+            return [result.notation, ...prev.filter(n => n !== result.notation)].slice(0, MAX_RECENT_NOTATIONS);
         });
     }), []);
 

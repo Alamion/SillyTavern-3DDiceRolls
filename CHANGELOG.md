@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.3
+
+### Features
+- **Fate / Fudge Dice (dF) — Full 3D Support** — `dF` now renders correctly in 3D with proper Fate symbols (`-`, `0`, `+`) on each cube face instead of standard 1-6 labels. Physics simulation returns correct fudge values (`-1`, `0`, `+1`) instead of 1-6. Factory updated to override D6 labels/values when `fudge` flag is set, skipping the `+1` value shift.
+
+### Improvements
+- **`faceLabel` field added to `DiceRoll`** — Optional string field on every die result, populated with `'-'`, `' '`, or `'+'` for fudge dice in both 2D and 3D paths. Ready for display formatters to show symbolic output.
+
+### Bug Fixes
+- **`dF` no longer rolls as D6 in 3D** — Root cause: `factory.ts` ignored the `fudge` flag on `DiceGroup`, created plain `D6DiceGeometry` with standard 1-6 labels and values. Now detects `group.fudge`, overrides face labels and values, and preserves `-1`/`0`/`+1` through the pipeline.
+
+### Infrastructure
+- **`DiceGeometryClass` type widened** — Exposes `labels: string[]` and `values: number[]` on the returned instance, enabling fudge label overrides in the factory layer.
+
 ## 1.3.2
 
 ### Features

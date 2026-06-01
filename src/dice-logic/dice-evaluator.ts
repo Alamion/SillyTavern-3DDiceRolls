@@ -19,10 +19,12 @@ function rollSingleDie(sides: number, customFaces?: number[], randomFn?: () => n
     return Math.floor(rand * sides) + 1;
 }
 
-function rollFudgeDie(randomFn?: () => number): number {
+function rollFudgeDie(randomFn?: () => number): { value: number; faceLabel: string } {
     const rand = randFloat(randomFn);
     const index = Math.floor(rand * 3);
-    return [-1, 0, 1][index];
+    const values = [-1, 0, 1];
+    const labels = ['-', ' ', '+'];
+    return { value: values[index], faceLabel: labels[index] };
 }
 
 function matchesComparePoint(value: number, cp: ComparePoint): boolean {
@@ -303,9 +305,11 @@ function evaluateDiceGroup(
 
         if (node.fudge) {
             for (let i = 0; i < node.count; i++) {
+                const fd = rollFudgeDie(randomFn);
                 rolls.push({
                     sides: 6,
-                    value: rollFudgeDie(randomFn),
+                    value: fd.value,
+                    faceLabel: fd.faceLabel,
                     dropped: false,
                 });
             }
@@ -510,15 +514,16 @@ export function evaluateDiceAST(
     };
 }
 
-export function getRawDiceValues(node: DiceGroupNode, randomFn?: () => number): number[] {
-    const rawValues: number[] = [];
+export function getRawDiceValues(node: DiceGroupNode, randomFn?: () => number): { value: number; faceLabel?: string }[] {
+    const rawValues: { value: number; faceLabel?: string }[] = [];
     if (node.fudge) {
         for (let i = 0; i < node.count; i++) {
-            rawValues.push(rollFudgeDie(randomFn));
+            const fd = rollFudgeDie(randomFn);
+            rawValues.push({ value: fd.value, faceLabel: fd.faceLabel });
         }
     } else {
         for (let i = 0; i < node.count; i++) {
-            rawValues.push(rollSingleDie(node.sides, node.customFaces, randomFn));
+            rawValues.push({ value: rollSingleDie(node.sides, node.customFaces, randomFn) });
         }
     }
     return rawValues;
@@ -535,7 +540,8 @@ export function extractRawValuesFromAST(ast: ASTNode, randomFn?: () => number): 
             const rawValues = getRawDiceValues(node, randomFn);
             const rolls: DiceRoll[] = rawValues.map(val => ({
                 sides: node.sides,
-                value: val,
+                value: val.value,
+                faceLabel: val.faceLabel,
                 dropped: false,
                 exploded: false,
             }));

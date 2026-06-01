@@ -380,7 +380,7 @@ export default abstract class DiceGeometry {
         const text = this.labels[index];
         if (text == undefined) return null;
 
-        const cacheKey = `texture_${this.sides}_${this.textureSize}_${index}_${this.diceColor}_${this.textColor}`;
+        const cacheKey = `texture_${this.sides}_${this.textureSize}_${index}_${this.diceColor}_${this.textColor}_${text}`;
         if (textureCache.has(cacheKey)) {
             return textureCache.get(cacheKey)!;
         }
@@ -762,6 +762,16 @@ export class D6DiceGeometry extends DiceGeometry {
     sides = 6;
     margin = 1.0;
     values = [...Array(6).keys()];
+    labels = [
+        ' ',
+        ' ',
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+    ];
 
     constructor(
         w: number,

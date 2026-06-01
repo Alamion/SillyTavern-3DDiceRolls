@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { debug } from '../../utils/logging';
 import { validateNotation } from '../../dice-logic';
 import { useDiceRoller } from '../DiceRollerContext';
@@ -18,7 +18,24 @@ export default function DicePool() {
     const [activeTab, setActiveTab] = useState<DiceTab>('standard');
     const { notationInput, setNotationInput, roll, isFavorite, toggleFavorite } = useDiceRoller();
 
-    const notationValid = notationInput.length === 0 || validateNotation(notationInput);
+    const [debouncedInput, setDebouncedInput] = useState('');
+    const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+
+    useEffect(() => {
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        if (notationInput.length === 0) {
+            setDebouncedInput('');
+            return;
+        }
+        debounceTimer.current = setTimeout(() => {
+            setDebouncedInput(notationInput);
+        }, 300);
+        return () => {
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        };
+    }, [notationInput]);
+
+    const notationValid = debouncedInput.length === 0 || validateNotation(debouncedInput);
     const starred = notationInput.trim().length > 0 && isFavorite(notationInput);
 
     const clearNotation = useCallback(() => {
