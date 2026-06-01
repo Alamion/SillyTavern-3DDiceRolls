@@ -17,8 +17,6 @@ export function registerFunctionTools(): void {
             return;
         }
 
-        unregisterFunctionTool('RollTheDice');
-
         const settings = getSettings();
         if (!settings.functionTool) {
             debug('Function tool is disabled in settings');
@@ -27,6 +25,7 @@ export function registerFunctionTools(): void {
 
         if (isToolCallingSupported()) {
             debug('Function tool calling is supported');
+            unregisterFunctionTool('RollTheDice');
         } else {
             warn('Function tool calling is not supported. Check your model and preset settings', 'Function Tools');
         }

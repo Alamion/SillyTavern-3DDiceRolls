@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { getSettings, updateSettings, type DiceRollerSettings, getContext } from '../utils/settings';
+import { useState, useEffect } from 'react';
+import { getSettings, updateSettings, subscribeSettings, type DiceRollerSettings, getContext } from '../utils/settings';
 import { SETTINGS_METADATA, type SettingType } from '../utils/constants';
 import { registerFunctionTools, unregisterFunctionTools } from '../utils/function-tools';
 
 export default function SettingsPanel(): JSX.Element {
     const [settings, setSettings] = useState<DiceRollerSettings>(getSettings());
+
+    useEffect(() => subscribeSettings(setSettings), []);
 
     const handleChange = (key: keyof DiceRollerSettings, value: boolean | string | number): void => {
         updateSettings({ [key]: value });

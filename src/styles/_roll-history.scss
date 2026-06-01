@@ -1,87 +1,87 @@
 @use 'variables' as *;
 
-#ddr-roll-history-container {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    z-index: 1000;
+/* ─── Hover variables ─── */
+$hovered-bg: color-mix(in srgb, rgb(128 128 128) 30%, var(--SmartThemeChatTintColor));
+$hovered-text: var(--SmartThemeEmColor);
 
-    @media screen and (max-width: 1000px) {
-        bottom: 50px;
-        left: 10px;
-    }
-}
-
-.ddr-roll-history-collapsed {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.ddr-roll-history-toggle {
-    position: relative;
-
-    &:hover {
-        background-color: var(--SmartThemeEmColor);
-        transform: scale(1.05);
-    }
-
-    &:active {
-        transform: scale(0.95);
-    }
-}
-
-.ddr-roll-history-icon {
-    font-size: $font-size-xl;
-}
-
-.ddr-roll-history-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    background: var(--SmartThemeQuoteColor);
-    color: var(--SmartThemeBodyColor);
-    font-size: $font-size-xs;
-    font-weight: bold;
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-}
-
-.ddr-roll-history-container {
+/* ─── Section ─── */
+.ddr-roll-section {
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-    padding: $spacing-xl;
-    background: var(--SmartThemeBlurTintColor);
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: $border-radius-lg;
-    box-shadow: 0 4px 12px var(--SmartThemeShadowColor);
-    min-width: $container-min-width;
-    max-width: $container-max-width;
+    flex: 1;
+    min-height: 80px;
+    overflow: hidden;
 }
 
-.ddr-roll-history-header {
+.ddr-roll-section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-top: $spacing-md;
-    border-top: 1px solid var(--SmartThemeBorderColor);
+    gap: $spacing-md;
 }
 
-.ddr-roll-history-title {
-    font-size: $font-size-lg;
-    font-weight: bold;
+.ddr-roll-section-btn-clear {
+    padding: $spacing-xs $spacing-xl;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+    transition: $transition-fast;
     color: var(--SmartThemeBodyColor);
+    background: var(--SmartThemeBlurTintColor);
+    white-space: nowrap;
+
+    &:hover:not(:disabled) {
+        background: $hovered-bg;
+        color: $hovered-text;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
 }
 
+/* ─── Tabs ─── */
+.ddr-roll-tabs {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+}
+
+.ddr-roll-tab {
+    flex: 1;
+    padding: $spacing-xs $spacing-md;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: $transition-fast;
+    opacity: 0.6;
+
+    &:hover {
+        opacity: 0.85;
+    }
+}
+
+.ddr-roll-tab-active {
+    opacity: 1;
+    border-bottom-color: var(--SmartThemeQuoteColor);
+}
+
+/* ─── Scrollable content ─── */
 .ddr-roll-history-content {
     display: flex;
     flex-direction: column-reverse;
     gap: $spacing-sm;
-    max-height: 250px;
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .ddr-roll-history-empty {
@@ -92,79 +92,139 @@
     opacity: 0.7;
 }
 
+/* ─── Entry item ─── */
 .ddr-roll-history-item {
-    display: flex;
-    flex-direction: row;
-    gap: $spacing-xs;
-    padding: $spacing-md $spacing-lg;
+    padding: $spacing-md;
     border-radius: $border-radius-sm;
-    backdrop-filter: blur(5px);
     background: color-mix(in srgb, var(--SmartThemeBlurTintColor), transparent 40%);
 
     &.latest {
-        flex-direction: column;
         background: color-mix(in srgb, var(--SmartThemeQuoteColor), transparent 75%);
     }
+
+    &.expanded {
+        background: color-mix(in srgb, var(--SmartThemeQuoteColor), transparent 75%);
+    }
+}
+button.ddr-roll-history-item {
+  cursor: pointer;
+  border: none;
+}
+
+/* ─── Entry row: star | body | reroll ─── */
+.ddr-roll-history-row {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    min-width: 0;
+}
+
+.ddr-roll-history-star {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: $font-size-lg;
+    line-height: 1;
+
+    &:hover {
+        transform: scale(1.15);
+    }
+}
+
+.ddr-star-icon {
+    font-size: $font-size-lg;
+    line-height: 1;
+}
+
+.ddr-star-empty {
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.4;
+}
+
+.ddr-star-filled {
+    color: var(--ddr-color-star);
+}
+
+.ddr-roll-history-body {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-sm;
+    min-width: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    overflow: hidden;
+}
+
+button.ddr-roll-history-body {
+  cursor: pointer;
 }
 
 .ddr-roll-history-notation {
     font-weight: bold;
     color: var(--SmartThemeEmColor);
     font-size: $font-size-md;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.ddr-roll-history-dice {
+.ddr-roll-history-label-sub {
     font-size: $font-size-xs;
     color: var(--SmartThemeBodyColor);
-    opacity: 0.9;
+    opacity: 0.6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ddr-roll-history-total {
     font-size: $font-size-base;
     font-weight: bold;
     color: var(--SmartThemeBodyColor);
+    flex-shrink: 0;
 }
 
-.ddr-roll-history-actions {
+.ddr-roll-history-reroll {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
     display: flex;
-    gap: $spacing-md;
-    justify-content: space-between;
-}
-
-.ddr-roll-history-btn {
-    padding: $spacing-sm $spacing-xl;
-    font-size: $font-size-sm;
-    font-weight: 600;
-    border: 1px solid var(--SmartThemeBorderColor);
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid transparent;
     border-radius: $border-radius-sm;
     cursor: pointer;
-    transition: $transition-fast;
+    padding: 0;
     color: var(--SmartThemeBodyColor);
-    flex: 1;
+    opacity: 0.6;
+    font-size: $font-size-sm;
+    transition: $transition-fast;
 
-    &:hover:not(:disabled) {
-        opacity: 0.8;
-        transform: translateY(-1px);
-    }
-
-    &:active:not(:disabled) {
-        transform: translateY(0);
-    }
-
-    &:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
+    &:hover {
+        opacity: 1;
+        background: $hovered-bg;
+        color: $hovered-text;
     }
 }
 
-.ddr-roll-history-btn-clear {
-    flex: 0;
-    background: var(--SmartThemeBlurTintColor);
-}
-
-.ddr-roll-history-btn-close {
-    background: transparent;
-    flex: 0;
-    padding: $spacing-sm $spacing-lg;
-    font-size: $font-size-lg;
+/* ─── Expanded dice details ─── */
+.ddr-roll-history-dice {
+    margin-top: $spacing-md;
+    padding-top: $spacing-md;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+    font-size: $font-size-xs;
+    color: var(--SmartThemeBodyColor);
+    opacity: 0.9;
+    line-height: 1.5;
 }

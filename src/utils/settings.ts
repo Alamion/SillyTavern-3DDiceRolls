@@ -1,4 +1,4 @@
-import type { SillyTavernContext } from '../global.d';
+import type { SillyTavernContext } from '../global';
 import { debug, error, warn } from './logging';
 import { DEFAULT_SETTINGS, MODULE_NAME } from './constants';
 import { registerRollCommand } from './commands';
@@ -9,8 +9,7 @@ export interface DiceRollerSettings {
     enable3dDice: boolean;
     injectResult: boolean;
     sendAsChatMessage: boolean;
-    showDiceButtons: boolean;
-    showRollHistory: boolean;
+    showDiceButton: boolean;
     functionTool: boolean;
     primaryDiceColor: string;
     secondaryDiceColor: string;

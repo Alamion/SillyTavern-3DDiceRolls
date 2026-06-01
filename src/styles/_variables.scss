@@ -40,3 +40,9 @@ $font-size-xl: 24px;
 
 $container-min-width: 350px;
 $container-max-width: 350px;
+
+:root {
+    --ddr-color-star: var(--SmartThemeQuoteColor);
+    --ddr-color-valid: color-mix(in srgb, var(--SmartThemeQuoteColor) 70%, transparent);
+    --ddr-color-invalid: color-mix(in srgb, var(--SmartThemeBodyColor) 50%, #f44336 50%);
+}

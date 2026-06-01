@@ -1,58 +1,56 @@
 @use 'variables' as *;
 
-.ddr-dice-pool-collapsed {
+/* ─── Hover variables ─── */
+$hovered-bg: color-mix(in srgb, rgb(128 128 128) 30%, var(--SmartThemeChatTintColor));
+$hovered-text: var(--SmartThemeEmColor);
+
+/* ─── Tabs ─── */
+.ddr-dice-tabs {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    gap: 2px;
+    margin-bottom: $spacing-lg;
 }
 
-.ddr-dice-pool-toggle {
+.ddr-dice-tab {
+    flex: 1;
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: $transition-fast;
+    opacity: 0.6;
 
     &:hover {
-        background-color: var(--SmartThemeEmColor);
-        transform: scale(1.05);
-    }
-
-    &:active {
-        transform: scale(0.95);
+        opacity: 0.85;
     }
 }
 
-.ddr-dice-pool-container {
+.ddr-dice-tab-active {
+    opacity: 1;
+    border-bottom-color: var(--SmartThemeQuoteColor);
+}
+
+/* ─── Tab body ─── */
+.ddr-dice-tab-body {
     display: flex;
     flex-direction: column;
-    gap: $spacing-xl;
-    padding: $spacing-2xl;
-    background: var(--SmartThemeBlurTintColor);
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: $border-radius-lg;
-    box-shadow: 0 4px 12px var(--SmartThemeShadowColor);
-    min-width: $container-min-width;
-    max-width: $container-max-width;
+    gap: $spacing-md;
+    margin-bottom: $spacing-lg;
 }
 
-.ddr-dice-pool-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: $spacing-md;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
+/* ─── Drawer panel layout ─── */
+.ddr-dice-panel-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding-right: 4px;
 }
 
-.ddr-dice-pool-title {
-    font-size: $font-size-lg;
-    font-weight: bold;
-    color: var(--SmartThemeBodyColor);
-}
-
-.ddr-dice-pool-count {
-    font-size: $font-size-sm;
-    padding: $spacing-xs $spacing-md;
-    background: var(--SmartThemeEmColor);
-    border-radius: 12px;
-    color: var(--SmartThemeBodyColor);
-}
-
+/* ─── Dice grid ─── */
 .ddr-dice-pool-dice {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -72,31 +70,16 @@
     transition: $transition-fast;
 
     &:hover {
-        background: var(--SmartThemeEmColor);
+        background: color-mix(in srgb, var(--SmartThemeBlurTintColor), transparent 30%);
         border-color: var(--SmartThemeBorderColor);
-        transform: translateY(-2px);
     }
 
     &:active {
-        transform: translateY(0);
+        transform: scale(0.95);
     }
 }
 
-.ddr-dice-pool-preview {
-    padding: $spacing-md $spacing-xl;
-    background: var(--SmartThemeChatTintColor);
-    border-radius: $border-radius-sm;
-    font-size: $font-size-md;
-    color: var(--SmartThemeBodyColor);
-    text-align: center;
-    word-break: break-all;
-    min-height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(5px);
-}
-
+/* ─── Pool actions ─── */
 .ddr-dice-pool-actions {
     display: flex;
     gap: $spacing-md;
@@ -114,14 +97,11 @@
     cursor: pointer;
     transition: $transition-fast;
     color: var(--SmartThemeBodyColor);
+    background: var(--SmartThemeBlurTintColor);
 
     &:hover:not(:disabled) {
-        opacity: 0.8;
-        transform: translateY(-1px);
-    }
-
-    &:active:not(:disabled) {
-        transform: translateY(0);
+        background: $hovered-bg;
+        color: $hovered-text;
     }
 
     &:disabled {
@@ -130,18 +110,176 @@
     }
 }
 
-.ddr-dice-pool-btn-close {
-    background: transparent;
-    padding: $spacing-md $spacing-xl;
-    font-size: $font-size-lg;
-}
-
 .ddr-dice-pool-btn-clear {
-    background: var(--SmartThemeBlurTintColor);
     flex: 1;
 }
 
 .ddr-dice-pool-btn-roll {
     background: color-mix(in srgb, var(--SmartThemeQuoteColor), transparent 20%);
     flex: 2;
+
+    &:hover:not(:disabled) {
+        background: color-mix(in srgb, rgb(128 128 128) 30%, var(--SmartThemeQuoteColor));
+        color: var(--SmartThemeBodyColor);
+    }
+}
+
+.ddr-dice-panel-divider {
+    height: 1px;
+    background: var(--SmartThemeBorderColor);
+    margin: $spacing-lg 0;
+}
+
+/* ─── ADV / DIS (D&D tab) ─── */
+.ddr-dice-adv-section {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    padding-top: $spacing-md;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+.ddr-dice-adv-actions {
+    display: flex;
+    gap: $spacing-md;
+}
+
+.ddr-dice-adv-btn {
+    flex: 1;
+    font-size: $font-size-sm;
+    padding: $spacing-md;
+    text-align: center;
+}
+
+/* ─── WoD difficulty ─── */
+.ddr-dice-wod-difficulty {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding: $spacing-md;
+    background: color-mix(in srgb, var(--SmartThemeBlurTintColor), transparent 30%);
+    border-radius: $border-radius-sm;
+}
+
+.ddr-dice-wod-label {
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor);
+}
+
+.ddr-dice-wod-controls {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+}
+
+.ddr-dice-wod-step {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-size-lg;
+    font-weight: bold;
+    color: var(--SmartThemeBodyColor);
+    background: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+    transition: $transition-fast;
+    line-height: 1;
+
+    &:hover:not(:disabled) {
+        background: $hovered-bg;
+        color: $hovered-text;
+    }
+
+    &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+}
+
+.ddr-dice-wod-value {
+    font-size: $font-size-xl;
+    font-weight: bold;
+    color: var(--SmartThemeEmColor);
+    min-width: 24px;
+    text-align: center;
+}
+
+.ddr-dice-wod-dice {
+    justify-content: center;
+}
+
+/* ─── Custom notation editor (always visible) ─── */
+.ddr-dice-custom-editor {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    margin-bottom: $spacing-md;
+}
+
+.ddr-dice-custom-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ddr-dice-custom-input {
+    width: 100%;
+    padding-right: 60px !important;
+    transition: border-color 0.15s ease;
+}
+
+.ddr-dice-custom-valid {
+    border-color: var(--ddr-color-valid) !important;
+}
+
+.ddr-dice-custom-invalid {
+    border-color: var(--ddr-color-invalid) !important;
+}
+
+.ddr-dice-custom-status {
+    position: absolute;
+    right: 32px;
+    font-size: $font-size-lg;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+.ddr-dice-custom-star {
+    position: absolute;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: $font-size-lg;
+    line-height: 1;
+    transition: $transition-fast;
+
+    &:hover {
+        transform: scale(1.15);
+    }
+}
+
+.ddr-dice-custom-status-valid {
+    color: var(--ddr-color-valid);
+}
+
+.ddr-dice-custom-status-invalid {
+    color: var(--ddr-color-invalid);
+}
+
+.ddr-dice-custom-hint {
+    font-size: $font-size-xs;
+    color: var(--ddr-color-invalid);
+    margin-top: 0;
 }

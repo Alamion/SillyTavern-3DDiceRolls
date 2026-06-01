@@ -95,8 +95,6 @@ export function prepareDiceGeometries(
 
 export class DiceFactory {
     constructor(
-        _width: number,
-        _height: number,
         private _config: DiceFactoryConfig,
     ) {}
 
@@ -109,12 +107,12 @@ export class DiceFactory {
 }
 
 export function create3DDiceRoll(
-    width: number,
-    height: number,
+    _width: number,
+    _height: number,
     diceColor: string,
     textColor: string,
 ): DiceFactory {
-    return new DiceFactory(width, height, {
+    return new DiceFactory({
         diceColor,
         textColor,
         scaler: 1,

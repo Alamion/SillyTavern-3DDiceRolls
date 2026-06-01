@@ -1,41 +1,29 @@
 # Code Review: Remaining Issues
 
-**Version:** 1.3.0-dev
-**Last updated:** May 2026
+**Version:** 1.3.2-dev
+**Last updated:** June 2026
 
 ---
 
 ## Open Code Smells & Technical Debt
 
-| # | File | Lines | Issue | Status                                              |
-|---|------|-------|-------|-----------------------------------------------------|
-| 3 | `dice-logic/index.ts` | — | **Unused exports.** `extractRawValuesFromAST`, `PRECEDENCE`, `parseDiceNotation` are exported but never consumed internally. | ⬜ OPEN (public API, kept for external consumers)    |
-| 4 | `roll-orchestrator.ts` | L82-86 | `prepareDiceGeometries` result used without checking if geometries is empty or null. | ⬜ OPEN                                              |
-| 6 | `renderer/factory.ts` | L15 | `DiceGeometryClass` uses `any`-like type signature. `create()` returns `{ clone(): DiceGeometryData }` without proper generics. | ⬜ OPEN                                              |
-| 7 | `renderer/resource.ts` | L3-9 | Overly broad types. `TrackedResource = Trackable \| Trackable[] \| Disposable` makes the Map values ambiguous. | ⬜ OPEN                                              |
+| # | File | Lines | Issue | Status |
+|---|------|-------|-------|--------|
+| 3 | `dice-logic/index.ts` | — | **Unused exports.** `extractRawValuesFromAST`, `PRECEDENCE`, `parseDiceNotation` are exported but never consumed internally. | ⬜ OPEN (public API, kept for external consumers) |
+| 4 | `roll-orchestrator.ts` | L81-86 | `prepareDiceGeometries` result used without checking if geometries is empty or null. If all dice types fail geometry creation, empty array passed to `startPhysicsRoll`. | ⬜ OPEN |
+| 6 | `renderer/factory.ts` | L15 | `DiceGeometryClass` uses an overly complex inline type signature. Return type only specifies `clone()` but consumer also accesses `.values`. | ⬜ OPEN |
+| 7 | `renderer/resource.ts` | L3-9 | **Overly broad types.** `TrackedResource = Trackable \| Trackable[] \| Disposable` makes the Map keys ambiguous. `resources` is `Map<TrackedResource, TrackedResource[]>` where both key and value are the same union — parent/child tracking is not type-safe. | ⬜ OPEN |
 
 ---
 
 ## Partially Resolved Areas
 
-### 2.4 — Settings Management 🟡 **PARTIALLY FIXED**
-
-**Fixed:** Polling removed. `subscribeSettings`/`notifySubscribers` pattern added. body-injection uses it.
-
-**Still remaining:**
-- `SettingsPanel.tsx` does **not** subscribe to settings changes — only updates when its own `handleChange` fires.
-- No React Context/Provider pattern wrapping the app.
-- `DicePool.tsx` and `RollHistory.tsx` call `getSettings()` in render body.
-
----
-
 ### 2.5 — UI Components are Not React-Idiomatic 🟡 **PARTIALLY FIXED**
 
-**Fixed:** `SettingsPanel.tsx` uses `useState<DiceRollerSettings>(getSettings())`. body-injection uses `subscribeSettings` instead of polling.
+**Fixed:** `DiceRollerProvider` context wraps the panel providing settings, history, favorites, and notation state. Components use `useDiceRoller()` instead of prop drilling. `$('#send_textarea')` replaced with `document.querySelector`.
 
 **Still remaining:**
-- `body-injection.tsx` **still manually creates React roots** and calls `.render()` imperatively. No app-level component tree.
-- `DicePool.tsx:50` and `RollHistory.tsx:33` still call `getSettings()` inline.
+- `body-injection.tsx` still manually creates React roots (required by ST extension lifecycle — likely unfixable).
 
 ---
 
@@ -52,40 +40,41 @@
 
 ---
 
-## No Longer Tracked
+## UI Layer: Specific Findings
 
-The following issues from the previous code review have been **fully resolved** and are no longer tracked in this file:
+### MEDIUM
 
-- Duplicate group key collision — fixed via unique group index counters
-- ResourceTracker memory leak — fixed via RollSession disposal
-- D100 logical/physical desync — fixed via combined D10 pairs
-- Keep/drop modifiers capped at 10 — replaced hardcoded arrays with regex
-- Dead code in `fixBrightness` — removed no-op
-- Double parse on error fallback — moved AST to outer scope
-- Duplicated interface declaration — removed duplicate
-- No window resize handling — added debounced resize listener
-- Adaptive camera not wired — initCamera(diceCount?) selects distance
-- Magic numbers — extracted to constants.ts
-- Backup file checked in — added to .gitignore, removed
-- No GPU resource cleanup — tracker.dispose() handles geometry/material disposal
-- Missing try/catch in createSettingsUI — added error handling
-- getOrCreateGeometry null safety — added null check before .clone()
-- No test infrastructure — 116 tests now exist
-- Generalized lexer token types (22 instead of 39+)
-- No NOT_EQ token — `!=` = `!` + `=`
-- Shared explosion counter prevents infinite recursion
-- Min/max always apply on pre-generated values
-- Fix mockRandom consumption order in reroll tests
-- scene.ts duplicate import comment — stale entry, file was already clean
-- shapes.ts `stopped` type — reviewed, not actually wrong
-- Group key duplication — extracted shared `buildGroupKey` helper to `dice-logic/utils.ts`
-- Edge-case test gaps — added tests: empty pre-gen map, max explosions cap, 50-level parens, unicode rejection, negative expressions
-- Mixed jQuery with React/TS — source app uses pare js and the plugin uses React/TS
-- COMPARE tokens could use moo `%type`. - moo 0.5.3's API uses {tokenType: keywordString} and combining all COMPARE operators into one regex conflicts with moo's fast single-char matching
+| # | File | Lines | Issue | Priority |
+|---|------|-------|-------|----------|
+| 20 | `components/2d_dices/DiceSvg.tsx` | 75-83 | **UI contains dice-logic.** The tens/ones splitting of a d100 value belongs in the evaluator layer, not the SVG component. | 🟡 Medium |
+| 24 | `components/RollHistory.tsx` | 35-182 | Three tab render functions (`renderChatTab`, `renderFavoritesTab`, `renderRecentTab`) are structurally identical — DRY violation. | 🟡 Medium |
+| 25 | `components/DiceRollerContext.tsx` | 59 | Module-level `saveTimeout` variable. Works with single provider instance but is a code smell — multiple providers would share the same timeout. | 🟡 Medium |
+| 26 | `dice-logic/roll-orchestrator.ts` | 111-293 | The 3D roll loop (reroll → unique → explosion) is 182 lines of inline logic. Should be extracted into helper functions or a state machine. | 🟡 Medium |
+
+### LOW
+
+| # | File | Lines | Issue | Priority |
+|---|------|-------|-------|----------|
+| 27 | `utils/settings.ts` | 93-98 | `getContext()` called fresh in every persistence function. Could cache at module level. | 🟢 Low |
+| 29 | `dice-logic/roll-orchestrator.ts` | 110-111 | `preGeneratedValues` map is created but the `d100` `multiplier` variable on line 105 is only used inside the loop iteration. Slight scope confusion. | 🟢 Low |
+
 ---
 
-## Top 3 Remaining Priorities
+## Top Remaining Priorities
 
-1. **DicePool/RollHistory call getSettings() in render body** — Breaks React reactivity.
-2. **Renderer code smells** — Items 4, 6, 7 (geometry safety, confusing types, overly broad types).
-3. **Mixed jQuery with React** — Item 2 (`$('#send_textarea')` in body-injection).
+1. **RollHistory tab render functions DRY** — Three nearly-identical tab render functions (#24).
+2. **DiceD100 tens/ones splitting in UI** — Belongs in evaluator layer, currently in `DiceSvg.tsx` (#20).
+3. **Module-level `saveTimeout`** — Multiple providers would share single timeout (#25).
+4. **3D roll loop inline logic** — 182 lines in `roll-orchestrator.ts` should be extracted (#26).
+5. **Cache `getContext()` at module level** — Called fresh in every persistence function (#27).
+
+---
+
+## Legend
+
+| Icon | Meaning |
+|------|---------|
+| 🟠 High | Significant code smell, refactor needed |
+| 🟡 Medium | Minor code quality issue |
+| 🟢 Low | Nitpick / nice-to-have |
+| ⬜ OPEN | Unresolved |

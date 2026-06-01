@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.3.2
+
+### Features
+- **UI Overhaul: Toolbar integration** — Replaced floating dice button with a SillyTavern-native `drawer-icon` toggle injected into `.top-settings-holder`. Uses `fa-solid fa-dice-d20 fa-fw` Font Awesome icon with `closedIcon`/`openIcon` states and `interactable` class for proper toolbar styling and accessibility.
+- **Combined dice pool + roll history panel** — Single toggle panel contains both the dice pool builder (8-die grid) and roll history list. Toggle button stays visible as a persistent open/close control; removed close buttons from both windows.
+- **RollHistory simplified** — Removed standalone collapsed/expanded toggle and floating container. Now renders inline inside the DicePool panel without its own header/close chrome.
+- **Invalid notation reference link** — When notation is invalid, star button replaced with `fa-regular fa-circle-question` icon linking to dice notation docs at `https://dice-roller.github.io/documentation/guide/notation/modifiers.html`.
+
+### Bug Fixes
+- **Removed background highlight on hover** — Dice pool toggle no longer highlights on hover, matching SillyTavern drawer-icon behavior.
+- **Star/favorite icons use Font Awesome** — Replaced text `★`/`☆` characters with `fa-solid fa-star`/`fa-regular fa-star` in DicePool.tsx and RollHistory.tsx, matching app convention (TOFIX #15).
+- **`isFavorite` reference stabilization** — `useCallback` deps changed from `[favorites]` to `favoritesRef` to prevent cascading re-renders (TOFIX #16).
+- **jQuery removed from body-injection** — Replaced `$('#send_textarea')` with `document.querySelector<HTMLTextAreaElement>` (TOFIX #9).
+- **SettingsPanel subscribes to settings changes** — Added `useEffect(() => subscribeSettings(setSettings), [])` for external reactivity (TOFIX #10).
+- **RollHistory dead code removed** — Stripped misleading `history.slice(0, 100)` (TOFIX #8).
+- **Hardcoded colors replaced with CSS vars** — `#4caf50`/`#f44336`/`#ffd700` replaced by `--ddr-color-valid`/`--ddr-color-invalid`/`--ddr-color-star` deriving from `--SmartTheme*` vars (TOFIX #17).
+- **Reroll button title clarifies right-click action** — Changed from "Set notation" to "Set notation | Right-click to roll" across all three RollHistory tabs (TOFIX #21).
+- **`unregisterFunctionTool` moved inside capability guard** — No longer called before `isToolCallingSupported` check; only unregisters when tool calling is supported (TOFIX #30).
+
+### Infrastructure
+- **Removed standalone RollHistory React root** — `body-injection.tsx` no longer creates a separate `#ddr-roll-history-container`. Roll history data is passed down as props to DicePool, which renders RollHistory inline.
+- **React Context/Provider pattern** — Introduced `DiceRollerProvider` (`DiceRollerContext.tsx`) as the single source of truth for settings, roll history, favorites, and notation input state. Components use `useDiceRoller()` hook instead of prop drilling.
+- **Per-chat history persistence** — `DiceRollerProvider` manages `HistoryEntry[]` loaded/saved to `chatMetadata['3d_dice_rolls']` automatically via debounced `saveMetadata()`.
+- **Global favorites & recent notations** — `FavoriteNotation[]` and last-10-unique notations persisted to `extensionSettings['3DDiceRolls']` via `saveSettingsDebounced()`.
+- **Removed history management from `body-injection.tsx`** — No longer owns `rollHistory` array, chat change listener, or manual re-renders. Side effects (injectResult, sendAsChatMessage) kept as independent `onRollResult` subscriptions.
+- **Domain logic extracted to `dice-logic/notation-utils.ts`** — `parseParts` (uses real `tokenize()` from lexer), `applyAdvantage`, `applyDisadvantage`, and `handleDiceNotation` moved from DicePool.tsx into new dedicated module. DicePool.tsx shrank from 442→251 lines (TOFIX #12, #13, #18).
+- **CSS custom properties for theme colors** — Added `:root`-scoped `--ddr-color-star`, `--ddr-color-valid`, `--ddr-color-invalid` in `_variables.scss` using `color-mix()` with `--SmartThemeQuoteColor`/`--SmartThemeBodyColor` for automatic light/dark adaptation.
+- **DicePool god component split** — 297→141 lines (~53% reduction). Tab bodies extracted into `DiceTabStandard`, `DiceTabDnd`, `DiceTabWod`. `renderDiceButton` inner function extracted as standalone `DiceButton` (`React.memo`). `DiceConfig` type and dice arrays moved to `dice-config.ts` (TOFIX #11, #22, #23).
+- **Tab components are memoized** — `StandardTab`, `DndTab`, `WodTab` use `React.memo`; only the active tab re-renders on state changes (TOFIX #23).
+- **WoD state localized** — `wodDifficulty` moved from `DicePool` into `DiceTabWod`, eliminating cross-tab coupling (TOFIX #11).
+- **9 duplicate 2D dice components consolidated** — Individual `DiceD2.tsx` through `DiceDF.tsx` removed; single `DiceSvg` factory component with `diceType` prop + shape descriptors (TOFIX #14).
+- **`DiceDUnknownProps` type alias removed** — Old `DiceD2.tsx` file deleted as part of consolidation, misleading naming no longer exists (TOFIX #19).
+- **Unused `_width`/`_height` params removed from `DiceFactory`** — Constructor no longer takes unused dimensions; `create3DDiceRoll` marks them as intentionally unused for API compatibility (TOFIX #13).
+- **`useDiceColors` dependency uses `JSON.stringify`** — Replaced `eslint-disable` with `JSON.stringify(shades)` for proper dependency tracking (TOFIX #28).
+
+### Features
+- **History Overhaul (3.5)** — Redesigned `RollHistory.tsx` with 3 tabs:
+  - **Chat** — per-chat entries, latest auto-expanded with `--SmartThemeQuoteColor`, click entry to copy notation to input and toggle details, reroll button (↻) to roll immediately, star icon to toggle favorite.
+  - **Favorites** — global `FavoriteNotation[]` list, click to set notation, reroll button, unstar to remove.
+  - **Recent** — last 10 unique notations globally, click to set notation, reroll button.
+  - Only the "All" tab shows expanded details; Favorites and Recent tabs show notation only.
+- **Favorites System (3.4)** — Star button in notation editor saves current notation as global favorite. Star icon on each history entry toggles favorite. Favorites persist across chats via `extensionSettings`.
+- **DicePool reads settings from context** — `getSettings()` no longer called in render body. Uses `useDiceRoller().settings`, fixing React reactivity and the TOFIX 2.4 issue.
+- **Notation input shared via context** — `DicePool` editor and `RollHistory` click-to-set both use the same `notationInput` state from `DiceRollerProvider`.
+
 ## 1.3.1
 
 ### Features
