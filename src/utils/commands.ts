@@ -1,6 +1,7 @@
 import { getContext } from './settings';
 import { debug, error, warn } from './logging';
 import { handleRollEvent } from './events';
+import { RollCancelledError } from '../dice-logic';
 
 export function registerRollCommand(): void {
     debug('Registering roll command');
@@ -9,7 +10,8 @@ export function registerRollCommand(): void {
         warn('Context not available - /roll command disabled', 'Dice Roller');
         return;
     }
-    const { SlashCommandParser, SlashCommand, SlashCommandArgument, SlashCommandNamedArgument, ARGUMENT_TYPE } = context;
+    const { SlashCommandParser, SlashCommand, SlashCommandArgument, SlashCommandNamedArgument, ARGUMENT_TYPE } =
+        context;
     if (!SlashCommandParser) {
         warn('Slash command parser not available - /roll command disabled', 'Dice Roller');
         return;
@@ -22,11 +24,18 @@ export function registerRollCommand(): void {
             callback: async (_args: Record<string, string>, value: string): Promise<string> => {
                 const quiet = String(_args?.quiet) === 'true';
                 const notation = value || '1d20';
-                const result = await handleRollEvent({ notation, quiet });
-                if (!result) {
-                    return `Failed to roll notation: ${notation}. Invalid notation.`;
+                try {
+                    const result = await handleRollEvent({ notation, quiet });
+                    if (!result) {
+                        return `Failed to roll notation: ${notation}. Invalid notation.`;
+                    }
+                    return String(result.total);
+                } catch (err) {
+                    if (err instanceof RollCancelledError) {
+                        return 'Roll cancelled.';
+                    }
+                    throw err;
                 }
-                return String(result.total);
             },
             helpString: 'Roll dice (e.g., /roll 2d6+2). Use quiet=true to suppress output.',
             returns: 'roll result',

@@ -3,21 +3,25 @@
 Roll dice in SillyTavern with full dice notation, realistic 3D physics, and a
 unified UI panel. Supports D&D, World of Darkness, Fate/Fudge, and custom dice.
 
-![Dice Panel](docs/attachments/dice_panel.png)
----
+## ![Dice Panel](docs/attachments/dice_panel.png)
 
 ## Features
 
 - **Full dice notation** — `4d20kh3`, `(2d6+3)*2`, `10d10>=6`, `dF`, `d[1,3,5]`
+- **Forced rolls** — `2d20@20,1` to force specific outcomes
+- **Botch modifiers** — `csb`/`cfb` for critical success/failure botch mechanics
 - **3D physics** — Three.js + Cannon-es with adaptive camera and loading spinner
+- **Sound effects** — Collision sounds with volume control (optional)
 - **Unified panel** — Toolbar-integrated toggle with dice pool + roll history
 - **Three tabs** — Standard, D&D (with ADV/DIS), WoD (difficulty slider)
 - **Roll history** — Per-chat with expandable details, favorites, recent
 - **Favorites system** — Save/load favorite notations globally
+- **Time-to-react** — Configurable interaction window to reroll specific 3D dice
 - **Customizable colors** — Dice faces and text (auto light/dark theme)
 - **AI function tool** — Let AI roll dice via `RollTheDice`
-- **External API** — Other extensions trigger rolls via events
+- **Dice macros** — `{{ddroll::2d6+3}}` in any macro-supported context
 - **Slash command** — `/roll` and `/r` with `quiet` mode
+- **External API** — Other extensions trigger rolls via events
 
 ---
 
@@ -50,11 +54,11 @@ Requires `pnpm install && pnpm run build` when building from source
 
 ## Docs
 
-| Document | Contents |
-|----------|----------|
-| [Usage Guide](docs/usage.md) | Full UI walkthrough, settings, commands, API |
+| Document                               | Contents                                           |
+| -------------------------------------- | -------------------------------------------------- |
+| [Usage Guide](docs/usage.md)           | Full UI walkthrough, settings, commands, API       |
 | [Notation Reference](docs/notation.md) | All dice types, modifiers, operators, custom faces |
-| [Development](docs/development.md) | Build from source, project structure, tests |
+| [Development](docs/development.md)     | Build from source, project structure, tests        |
 
 ### Quick Reference
 
@@ -67,15 +71,18 @@ Requires `pnpm install && pnpm run build` when building from source
 
 ### Settings
 
-| Setting | Description |
-|---------|-------------|
-| Show dice button | Show/hide the panel toggle |
-| Enable 3D Dice Rolls | Toggle 3D physics on/off |
-| Inject result in user prompt | Append result to message box |
-| Send result as chat message | Send as system message |
-| Enable AI function tool | Let AI call `RollTheDice` |
-| Primary dice color | Dice face color |
-| Secondary dice color | Dice text color |
+| Setting                      | Description                                     |
+| ---------------------------- | ----------------------------------------------- |
+| Show dice button             | Show/hide the panel toggle                      |
+| Enable 3D Dice Rolls         | Toggle 3D physics on/off                        |
+| Inject result in user prompt | Append result to message box                    |
+| Send result as chat message  | Send as system message                          |
+| Enable AI function tool      | Let AI call `RollTheDice`                       |
+| Roll sound effects           | Toggle collision sounds (with volume slider)    |
+| Time to react                | Enable interaction window for rerolling 3D dice |
+| React window (seconds)       | How long the interaction window lasts (1-60)    |
+| Primary dice color           | Dice face color                                 |
+| Secondary dice color         | Dice text color                                 |
 
 ### Commands
 
@@ -83,6 +90,13 @@ Requires `pnpm install && pnpm run build` when building from source
 /roll 2d6+3
 /r 4d20kh3
 /roll (2d6+3)*2 quiet=true
+```
+
+### Macros
+
+```
+{{ddroll::2d6+3}}
+{{ddroll::4d20kh3}}
 ```
 
 ---

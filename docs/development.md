@@ -6,15 +6,15 @@
 
 ```bash
 pnpm install       # Install dependencies
-pnpm run build     # Build to dist/index.js (webpack, production)
+pnpm run build     # Build to dist/index.js (webpack, production); copies sounds/ → dist/sounds/
 pnpm run dev       # Watch mode
-pnpm run test      # Run 142+ tests (Vitest)
+pnpm run test      # Run 165 tests (Vitest)
 pnpm exec tsc --noEmit  # Typecheck
 pnpm run lint      # ESLint
 pnpm run lint:fix  # ESLint with auto-fix
 ```
 
-Output: `dist/index.js`
+Output: `dist/index.js` and `dist/sounds/` (audio assets for 3D collision effects)
 
 ---
 
@@ -24,7 +24,7 @@ Output: `dist/index.js`
 src/
 ├── dice-logic/           # Lexer (moo), parser (recursive descent),
 │   │                     # evaluator, roller, orchestrator, notation-utils
-│   ├── renderer/         # Three.js + Cannon-es 3D visualization
+│   ├── renderer/         # Three.js + Cannon-es 3D visualization, sound
 │   │   ├── renderer.ts   # DiceRenderer class, roll phases
 │   │   ├── renderer-pool.ts  # Shared renderer pool (5min inactivity debounce)
 │   │   ├── scene.ts      # Three.js scene management
@@ -32,7 +32,9 @@ src/
 │   │   ├── shapes.ts     # Dice shape definitions (D2-D20, D100)
 │   │   ├── geometries.ts # Three.js buffer geometries with face labels
 │   │   ├── factory.ts    # Geometry factory (handles fudge overrides)
-│   │   └── resource.ts   # ResourceTracker for GPU cleanup
+│   │   ├── resource.ts   # ResourceTracker for GPU cleanup
+│   │   └── sound-manager.ts  # Collision audio via Cannon-es events
+│   ├── errors.ts         # Custom error types (RollCancelledError)
 │   ├── index.ts          # Barrel exports
 │   ├── types.ts          # All type definitions
 │   ├── dice-lexer.ts     # moo-based tokenizer (22 token types)
@@ -47,6 +49,7 @@ src/
 │   ├── commands.ts       # /roll slash command registration
 │   ├── events.ts         # External event API (3ddicerolls:roll)
 │   ├── function-tools.ts # AI RollTheDice tool registration
+│   ├── macros.ts         # {{ddroll::notation}} macro registration
 │   ├── body-injection.tsx # React DOM injection + roll side effects
 │   ├── logging.ts        # Debug/info/warn/error with toastr
 │   ├── recolor_svg.ts    # Color blending utilities
@@ -114,9 +117,31 @@ keep/drop/sort/crit labeling.
 10. **Critical failure** — mark crit fails
 11. **Sort** — asc/desc
 
+### 3D Roll Phases & User Interaction
+
+1. **Physics roll** — dice fall with gravity, settle on surface
+2. **Reroll phase** — `detectRerolls` / `detectUnique` iteratively rethrow dice via physics
+3. **Explosion phase** — extra dice added dynamically for exploding modifiers
+4. **Time-to-react window** — if enabled, user can click individual dice to reroll them (raycaster click detection). Accept (✓) / Cancel (✗) buttons to resolve early or discard the roll
+5. **Dismiss** — dice arranged and removed from scene
+
+### Sound System
+
+`SoundManager` (in `renderer/sound-manager.ts`) listens to Cannon-es `body.on('collide')` events:
+
+- Surface sounds (felt, wood, metal) — played when dice hit the table
+- Die material sounds (plastic, metal, wood) — played on die-to-die collisions
+- Configurable speed threshold (`SoundManagerConfig.speedThreshold`, default 250)
+- Dynamic runtime updates via `updateSoundConfig()` in `renderer-pool.ts`
+
+### Forced Rolls (`@`)
+
+The `@` notation (`2d20@20,1`) sets `forcedValues[]` on `DiceGroupNode`. In 2D mode, the evaluator uses these values directly in the roll creation loop. In 3D mode, `executeUnifiedRoll` warns and proceeds with normal physics.
+
 ### React State Management
 
 `DiceRollerProvider` wraps the entire panel and provides via `useDiceRoller()`:
+
 - `settings` — reactive via `subscribeSettings`
 - `history` — per-chat, persisted to `chatMetadata['3d_dice_rolls']`
 - `favorites` — global, persisted to `extensionSettings['3DDiceRolls']`
@@ -146,8 +171,8 @@ const result = await triggerRoll('1d20+5');
 
 ```typescript
 interface DiceRollEventPayload {
-    notation: string;   // required
-    quiet?: boolean;    // optional, default false
+    notation: string; // required
+    quiet?: boolean; // optional, default false
 }
 ```
 
@@ -158,8 +183,8 @@ interface RollResult {
     notation: string;
     diceGroups: DiceGroupResult[];
     total: number;
-    details: string;     // "(4+3+6) + (2)" style
-    formatted: string;   // "3d6+1d4: (4+3+6) + (2) = 15"
+    details: string; // "(4+3+6) + (2)" style
+    formatted: string; // "3d6+1d4: (4+3+6) + (2) = 15"
 }
 ```
 
@@ -167,22 +192,22 @@ interface RollResult {
 
 ## Build Output
 
-The extension builds to a single file `dist/index.js` that SillyTavern loads
-as an extension script.
+The extension builds to `dist/index.js` (and copies `sounds/` → `dist/sounds/`)
+that SillyTavern loads as an extension bundle.
 
 ---
 
 ## Testing
 
-142+ tests across 7 files (Vitest):
+165 tests across 7 files (Vitest):
 
-- Parser tests (55) — tokenization, AST construction, edge cases
-- Evaluator basic rolls (11)
+- Parser tests (69) — tokenization, AST, forced rolls, edge cases
+- Evaluator basic rolls (18) — including forced rolls, pre-generated values
 - Evaluator combined expressions (8)
-- Evaluator explosion (8)
-- Evaluator modifiers (20)
-- Evaluator reroll (7)
-- Integration tests (7)
+- Evaluator explosion (14) — include reroll + explosion interaction tests
+- Evaluator modifiers (39) — min/max, criticals, botch (csb/cfb), unique, reroll
+- Evaluator reroll (updated)
+- Integration tests (8) — full pipeline, complex expressions
 
 Run with:
 

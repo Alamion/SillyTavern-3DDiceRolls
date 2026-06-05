@@ -8,7 +8,7 @@ export interface NotationPart {
 }
 
 function reconstructText(tokens: LexerToken[]): string {
-    return tokens.map(t => t.text).join('');
+    return tokens.map((t) => t.text).join('');
 }
 
 export function parseParts(notation: string): NotationPart[] {
@@ -32,9 +32,9 @@ export function parseParts(notation: string): NotationPart[] {
         segments.push(current);
     }
 
-    return segments.map(segTokens => {
+    return segments.map((segTokens) => {
         const raw = reconstructText(segTokens);
-        const diceToken = segTokens.find(t => t.type === 'DICE');
+        const diceToken = segTokens.find((t) => t.type === 'DICE');
         if (!diceToken) {
             return { raw, count: 0, sides: 0 as const, modifier: '' };
         }
@@ -46,7 +46,7 @@ export function parseParts(notation: string): NotationPart[] {
         return {
             raw,
             count: val.count,
-            sides: val.fudge ? 'F' as const : val.sides,
+            sides: val.fudge ? ('F' as const) : val.sides,
             modifier,
         };
     });
@@ -72,7 +72,7 @@ export function applyAdvantage(prev: string): string {
     let firstMatch = true;
     let foundOpposite = false;
     let foundBare = false;
-    const out = parts.map(p => {
+    const out = parts.map((p) => {
         if (p.sides !== 20) return p.raw;
         if (!firstMatch) return p.raw;
 
@@ -105,7 +105,7 @@ export function applyDisadvantage(prev: string): string {
     let firstMatch = true;
     let foundOpposite = false;
     let foundBare = false;
-    const out = parts.map(p => {
+    const out = parts.map((p) => {
         if (p.sides !== 20) return p.raw;
         if (!firstMatch) return p.raw;
 
@@ -129,6 +129,13 @@ export function applyDisadvantage(prev: string): string {
         result = result ? `${result} + 2d20kl1` : '2d20kl1';
     }
     return result;
+}
+
+export function splitD100Value(value: number): { tens: string; ones: string } {
+    const rawTens = Math.floor(value / 10) * 10;
+    const tens = rawTens === 0 || rawTens === 100 ? '00' : rawTens.toString();
+    const ones = (value % 10).toString();
+    return { tens, ones };
 }
 
 export function handleDiceNotation(
@@ -175,7 +182,7 @@ export function handleDiceNotation(
                 };
             }
         }
-        return parts.map(p => p.raw).join(' + ');
+        return parts.map((p) => p.raw).join(' + ');
     }
 
     if (increment) {

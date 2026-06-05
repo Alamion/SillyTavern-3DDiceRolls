@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, MODULE_NAME } from './constants';
 import { registerRollCommand } from './commands';
 import { registerFunctionTools } from './function-tools';
 import { registerDiceRollEvent } from './events';
+import { registerDiceMacros } from './macros';
 
 export interface DiceRollerSettings {
     enable3dDice: boolean;
@@ -13,9 +14,14 @@ export interface DiceRollerSettings {
     functionTool: boolean;
     primaryDiceColor: string;
     secondaryDiceColor: string;
+    enableSound: boolean;
+    soundVolume: number;
+    timeToReact: boolean;
+    timeToReactSeconds: number;
 }
 
 let currentSettings: DiceRollerSettings = { ...DEFAULT_SETTINGS };
+let cachedContext: SillyTavernContext | null | undefined = undefined;
 
 export function getSettings(): DiceRollerSettings {
     return { ...currentSettings };
@@ -49,16 +55,9 @@ function saveSettings(): void {
     }
 }
 
-function filterSettings<T extends object>(
-    source: Partial<Record<keyof T, unknown>>,
-    defaults: T,
-): Partial<T> {
+function filterSettings<T extends object>(source: Partial<Record<keyof T, unknown>>, defaults: T): Partial<T> {
     const validKeys = Object.keys(defaults) as (keyof T)[];
-    return Object.fromEntries(
-        validKeys
-            .filter(key => key in source)
-            .map(key => [key, source[key]]),
-    ) as Partial<T>;
+    return Object.fromEntries(validKeys.filter((key) => key in source).map((key) => [key, source[key]])) as Partial<T>;
 }
 
 export function initSettings(): void {
@@ -83,6 +82,7 @@ export function initSettings(): void {
         registerRollCommand();
         registerFunctionTools();
         registerDiceRollEvent();
+        registerDiceMacros();
 
         debug('3D Dice Roller initialized successfully');
     } catch (err) {
@@ -91,16 +91,21 @@ export function initSettings(): void {
 }
 
 export function getContext(): SillyTavernContext | null {
-    if (typeof globalThis.SillyTavern?.getContext !== 'function') {
-        return null;
+    if (cachedContext === undefined) {
+        cachedContext =
+            typeof globalThis.SillyTavern?.getContext === 'function' ? globalThis.SillyTavern.getContext() : null;
     }
-    return globalThis.SillyTavern.getContext();
+    return cachedContext;
 }
 
 export interface MixedRollConfig {
     diceColor: string;
     textColor: string;
     enable3dDice: boolean;
+    enableSound: boolean;
+    soundVolume: number;
+    timeToReact: boolean;
+    timeToReactSeconds: number;
 }
 
 export function getRollConfig(): MixedRollConfig {
@@ -110,6 +115,10 @@ export function getRollConfig(): MixedRollConfig {
         diceColor: settings.primaryDiceColor,
         textColor: settings.secondaryDiceColor,
         enable3dDice: settings.enable3dDice,
+        enableSound: settings.enableSound,
+        soundVolume: settings.soundVolume,
+        timeToReact: settings.timeToReact,
+        timeToReactSeconds: settings.timeToReactSeconds,
     };
 }
 
@@ -121,5 +130,5 @@ export function subscribeSettings(callback: (settings: DiceRollerSettings) => vo
 }
 
 function notifySubscribers(): void {
-    settingsSubscribers.forEach(cb => cb(getSettings()));
+    settingsSubscribers.forEach((cb) => cb(getSettings()));
 }

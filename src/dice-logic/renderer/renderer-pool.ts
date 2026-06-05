@@ -34,6 +34,8 @@ export function startPhysicsRoll(
 } {
     if (!sharedRenderer) {
         sharedRenderer = createRenderer(config);
+    } else {
+        sharedRenderer.setTimeToReact(config.timeToReact ?? false, config.timeToReactSeconds ?? 5);
     }
 
     debug(`RendererPool: Starting physics roll with ${diceData.length} dice`);
@@ -49,6 +51,16 @@ export function startPhysicsRoll(
         addDice: (extraDiceData: DiceGeometryData[]) => sharedRenderer!.addDice(extraDiceData),
         arrangeAndDismiss: () => sharedRenderer!.arrangeAndDismiss(),
     };
+}
+
+export function updateSoundConfig(config: { enabled?: boolean; volume?: number }): void {
+    if (!sharedRenderer) return;
+    if (config.enabled !== undefined) {
+        sharedRenderer.soundManager.setEnabled(config.enabled);
+    }
+    if (config.volume !== undefined) {
+        sharedRenderer.soundManager.setVolume(config.volume);
+    }
 }
 
 export function disposeSharedRenderer(): void {

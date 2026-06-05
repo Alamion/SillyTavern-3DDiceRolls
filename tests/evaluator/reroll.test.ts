@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseToAST } from '../../src/dice-logic/dice-parser';
-import { evaluateDiceAST, detectRerolls } from '../../src/dice-logic/dice-evaluator';
-import type { DiceRoll } from '../../src/dice-logic/types';
+import { parseToAST, evaluateDiceAST, detectRerolls } from '../../src/dice-logic';
+import type { DiceRoll } from '../../src/dice-logic';
 
 function mockRandom(...values: number[]): () => number {
     let i = 0;
@@ -21,7 +20,7 @@ describe('Evaluator - reroll', () => {
         // reroll die0: 0.8→5
         // final: [5, 4]
         expect(result.total).toBe(9);
-        expect(result.diceGroups[0].rolls.map(r => r.value)).toEqual([5, 4]);
+        expect(result.diceGroups[0].rolls.map((r) => r.value)).toEqual([5, 4]);
     });
 
     it('rerolls values <= threshold', () => {
@@ -31,7 +30,7 @@ describe('Evaluator - reroll', () => {
         // reroll die0: 0.8→5 (stop), reroll die1: 0.7→5 (stop)
         // final: [5, 5, 6, 4]
         expect(result.total).toBe(20);
-        expect(result.diceGroups[0].rolls.map(r => r.value)).toEqual([5, 5, 6, 4]);
+        expect(result.diceGroups[0].rolls.map((r) => r.value)).toEqual([5, 5, 6, 4]);
     });
 
     it('rerolls repeatedly until value exceeds threshold', () => {
@@ -54,7 +53,10 @@ describe('Evaluator - reroll', () => {
 
     it('detectRerolls skips already-rerolled dice when once is set', () => {
         const ast = parseToAST('3d6ro');
-        if (ast.type !== 'DiceGroup') { expect.fail('Expected DiceGroup'); return; }
+        if (ast.type !== 'DiceGroup') {
+            expect.fail('Expected DiceGroup');
+            return;
+        }
         const node = ast;
         const rolls: DiceRoll[] = [
             { sides: 6, value: 1, dropped: false, rerolledOnce: true },
@@ -62,13 +64,20 @@ describe('Evaluator - reroll', () => {
             { sides: 6, value: 1, dropped: false, rerolledOnce: true },
         ];
         // With once flag, die0 and die2 (already rerolledOnce) should be skipped
-        const indices = detectRerolls(node, rolls.map(r => r.value), rolls);
+        const indices = detectRerolls(
+            node,
+            rolls.map((r) => r.value),
+            rolls,
+        );
         expect(indices).toEqual([]);
     });
 
     it('detectRerolls returns indices for non-rerolledOnce dice', () => {
         const ast = parseToAST('3d6ro');
-        if (ast.type !== 'DiceGroup') { expect.fail('Expected DiceGroup'); return; }
+        if (ast.type !== 'DiceGroup') {
+            expect.fail('Expected DiceGroup');
+            return;
+        }
         const node = ast;
         const rolls: DiceRoll[] = [
             { sides: 6, value: 1, dropped: false },
@@ -76,7 +85,11 @@ describe('Evaluator - reroll', () => {
             { sides: 6, value: 1, dropped: false },
         ];
         // die0=1 and die2=1 should be detected
-        const indices = detectRerolls(node, rolls.map(r => r.value), rolls);
+        const indices = detectRerolls(
+            node,
+            rolls.map((r) => r.value),
+            rolls,
+        );
         expect(indices).toEqual([0, 2]);
     });
 
@@ -97,6 +110,6 @@ describe('Evaluator - reroll', () => {
         // reroll die0: 0.9→faces[2]=5
         // final: [5, 3]
         expect(result.total).toBe(8);
-        expect(result.diceGroups[0].rolls.map(r => r.value)).toEqual([5, 3]);
+        expect(result.diceGroups[0].rolls.map((r) => r.value)).toEqual([5, 3]);
     });
 });

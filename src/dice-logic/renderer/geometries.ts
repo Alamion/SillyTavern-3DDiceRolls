@@ -1,13 +1,5 @@
 import { Body, ConvexPolyhedron, Vec3 } from 'cannon-es';
-import {
-    BufferGeometry,
-    Float32BufferAttribute,
-    Mesh,
-    MeshPhongMaterial,
-    Sphere,
-    Texture,
-    Vector3,
-} from 'three';
+import { BufferGeometry, Float32BufferAttribute, Mesh, MeshPhongMaterial, Sphere, Texture, Vector3 } from 'three';
 import { debug } from '../../utils/logging';
 import { fixBrightness } from '../../utils/recolor_svg';
 
@@ -26,22 +18,22 @@ const DEFAULT_DICE_OPTIONS: DiceOptions = {
 };
 
 interface DiceOptions {
-    diceColor: string
-    textColor: string
-    textFont: string
-    narrativeSymbolSet: string
+    diceColor: string;
+    textColor: string;
+    textFont: string;
+    narrativeSymbolSet: string;
 }
 
 export interface DiceGeometryData {
-    body: Body
-    geometry: Mesh
-    values: number[]
+    body: Body;
+    geometry: Mesh;
+    values: number[];
 }
 
 const textureCache = new Map<string, Texture>();
 
 export function clearTextureCache(): void {
-    textureCache.forEach(texture => texture.dispose());
+    textureCache.forEach((texture) => texture.dispose());
     textureCache.clear();
 }
 
@@ -54,9 +46,9 @@ export default abstract class DiceGeometry {
     textureSize!: number;
     shapeData!: { vertices: Vec3[]; faces: number[][] };
 
-    abstract af: number
-    abstract chamfer: number
-    abstract faces: number[][]
+    abstract af: number;
+    abstract chamfer: number;
+    abstract faces: number[][];
 
     labels = [
         ' ',
@@ -83,13 +75,13 @@ export default abstract class DiceGeometry {
         '20',
     ];
 
-    abstract margin: number
-    abstract mass: number
-    abstract sides: number
-    abstract scaleFactor: number
-    abstract tab: number
-    abstract values: number[]
-    abstract vertices: number[][]
+    abstract margin: number;
+    abstract mass: number;
+    abstract sides: number;
+    abstract scaleFactor: number;
+    abstract tab: number;
+    abstract values: number[];
+    abstract vertices: number[][];
 
     fontFace = 'Arial';
 
@@ -132,10 +124,7 @@ export default abstract class DiceGeometry {
 
     create(): this {
         debug(`DiceGeometry: Creating ${this.sides}-sided die`);
-        this.textureSize =
-            this.calculateTextureSize(
-                this.scale / 2 + this.scale * this.margin,
-            ) * 2;
+        this.textureSize = this.calculateTextureSize(this.scale / 2 + this.scale * this.margin) * 2;
 
         const geometry = this.getGeometry();
         const materials = this.getMaterials();
@@ -163,10 +152,7 @@ export default abstract class DiceGeometry {
         }
 
         this.chamferGeometry = this.getChamferGeometry(vectors);
-        const geometry = this.makeGeometry(
-            this.chamferGeometry.vectors,
-            this.chamferGeometry.faces,
-        );
+        const geometry = this.makeGeometry(this.chamferGeometry.vectors, this.chamferGeometry.faces);
 
         this.shape = this.makeShape(vectors);
 
@@ -184,11 +170,7 @@ export default abstract class DiceGeometry {
         const cf = new Array(this.faces.length);
         for (let i = 0; i < vertices.length; ++i) {
             const v = vertices[i];
-            cv[i] = new Vec3(
-                v.x * this.radius,
-                v.y * this.radius,
-                v.z * this.radius,
-            );
+            cv[i] = new Vec3(v.x * this.radius, v.y * this.radius, v.z * this.radius);
         }
         for (let i = 0; i < this.faces.length; ++i) {
             cf[i] = this.faces[i].slice(0, this.faces[i].length - 1);
@@ -198,8 +180,8 @@ export default abstract class DiceGeometry {
     }
 
     getChamferGeometry(vectors: Vector3[]): {
-        vectors: Vector3[]
-        faces: number[][]
+        vectors: Vector3[];
+        faces: number[][];
     } {
         const chamferVectors: Vector3[] = [];
         const chamferFaces: number[][] = [];
@@ -215,17 +197,13 @@ export default abstract class DiceGeometry {
             for (let j = 0; j < fl; ++j) {
                 const vv = vectors[ii[j]].clone();
                 centerPoint.add(vv);
-                cornerFaces[ii[j]].push(
-                    (face[j] = chamferVectors.push(vv) - 1),
-                );
+                cornerFaces[ii[j]].push((face[j] = chamferVectors.push(vv) - 1));
             }
             centerPoint.divideScalar(fl);
 
             for (let j = 0; j < fl; ++j) {
                 const vv = chamferVectors[face[j]];
-                vv.subVectors(vv, centerPoint)
-                    .multiplyScalar(this.chamfer)
-                    .addVectors(vv, centerPoint);
+                vv.subVectors(vv, centerPoint).multiplyScalar(this.chamfer).addVectors(vv, centerPoint);
             }
             face.push(ii[fl]);
             chamferFaces.push(face);
@@ -238,8 +216,7 @@ export default abstract class DiceGeometry {
                 for (let m = 0; m < this.faces[i].length - 1; ++m) {
                     const n = this.faces[j].indexOf(this.faces[i][m]);
                     if (n >= 0 && n < this.faces[j].length - 1) {
-                        if (lastm >= 0 && m !== lastm + 1)
-                            pairs.unshift([i, m], [j, n]);
+                        if (lastm >= 0 && m !== lastm + 1) pairs.unshift([i, m], [j, n]);
                         else pairs.push([i, m], [j, n]);
                         lastm = m;
                     }
@@ -321,20 +298,12 @@ export default abstract class DiceGeometry {
                     (Math.sin(this.af) + 1 + this.tab) / 2 / (1 + this.tab),
                 );
                 uvs.push(
-                    (Math.cos(aa * (j + 1) + this.af) + 1 + this.tab) /
-                    2 /
-                    (1 + this.tab),
-                    (Math.sin(aa * (j + 1) + this.af) + 1 + this.tab) /
-                    2 /
-                    (1 + this.tab),
+                    (Math.cos(aa * (j + 1) + this.af) + 1 + this.tab) / 2 / (1 + this.tab),
+                    (Math.sin(aa * (j + 1) + this.af) + 1 + this.tab) / 2 / (1 + this.tab),
                 );
                 uvs.push(
-                    (Math.cos(aa * (j + 2) + this.af) + 1 + this.tab) /
-                    2 /
-                    (1 + this.tab),
-                    (Math.sin(aa * (j + 2) + this.af) + 1 + this.tab) /
-                    2 /
-                    (1 + this.tab),
+                    (Math.cos(aa * (j + 2) + this.af) + 1 + this.tab) / 2 / (1 + this.tab),
+                    (Math.sin(aa * (j + 2) + this.af) + 1 + this.tab) / 2 / (1 + this.tab),
                 );
             }
 
@@ -370,10 +339,7 @@ export default abstract class DiceGeometry {
     }
 
     calculateTextureSize(approx: number): number {
-        return Math.max(
-            128,
-            Math.pow(2, Math.floor(Math.log(approx) / Math.log(2))),
-        );
+        return Math.max(128, Math.pow(2, Math.floor(Math.log(approx) / Math.log(2))));
     }
 
     createTexture(index: number): Texture | null {
@@ -446,7 +412,7 @@ export default abstract class DiceGeometry {
         });
         const clonedGeometry = this.geometry.clone();
         if (Array.isArray(clonedGeometry.material)) {
-            clonedGeometry.material = clonedGeometry.material.map(m => m.clone());
+            clonedGeometry.material = clonedGeometry.material.map((m) => m.clone());
         } else {
             clonedGeometry.material = clonedGeometry.material.clone();
         }
@@ -627,11 +593,7 @@ export class D10DiceGeometry extends DiceGeometry {
     ) {
         super(w, h, options, scaler);
         for (let i = 0, b = 0; i < 10; ++i, b += (Math.PI * 2) / 10) {
-            this.vertices.push([
-                Math.cos(b),
-                Math.sin(b),
-                0.105 * (i % 2 ? 1 : -1),
-            ]);
+            this.vertices.push([Math.cos(b), Math.sin(b), 0.105 * (i % 2 ? 1 : -1)]);
         }
         this.vertices.push([0, 0, -1]);
         this.vertices.push([0, 0, 1]);
@@ -683,11 +645,7 @@ export class D100DiceGeometry extends DiceGeometry {
     ) {
         super(w, h, options, scaler);
         for (let i = 0, b = 0; i < 10; ++i, b += (Math.PI * 2) / 10) {
-            this.vertices.push([
-                Math.cos(b),
-                Math.sin(b),
-                0.105 * (i % 2 ? 1 : -1),
-            ]);
+            this.vertices.push([Math.cos(b), Math.sin(b), 0.105 * (i % 2 ? 1 : -1)]);
         }
         this.vertices.push([0, 0, -1]);
         this.vertices.push([0, 0, 1]);
@@ -762,16 +720,7 @@ export class D6DiceGeometry extends DiceGeometry {
     sides = 6;
     margin = 1.0;
     values = [...Array(6).keys()];
-    labels = [
-        ' ',
-        ' ',
-        '1',
-        '2',
-        '3',
-        '4',
-        '5',
-        '6',
-    ];
+    labels = [' ', ' ', '1', '2', '3', '4', '5', '6'];
 
     constructor(
         w: number,
@@ -848,8 +797,7 @@ export class D4DiceGeometry extends DiceGeometry {
 
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d')!;
-        const textStart =
-            this.calculateTextureSize(this.radius / 2 + this.radius * 2) * 2;
+        const textStart = this.calculateTextureSize(this.radius / 2 + this.radius * 2) * 2;
         canvas.width = canvas.height = textStart;
         context.font = `${textStart / 5}pt '${this.fontFace}'`;
         context.fillStyle = fixBrightness(this.diceColor, -10);
@@ -858,11 +806,7 @@ export class D4DiceGeometry extends DiceGeometry {
         context.textBaseline = 'middle';
         context.fillStyle = this.textColor;
         for (const i in this.faceTexts[index]) {
-            context.fillText(
-                `${this.faceTexts[index][i]}`,
-                canvas.width / 2,
-                canvas.height / 2 - textStart * 0.3,
-            );
+            context.fillText(`${this.faceTexts[index][i]}`, canvas.width / 2, canvas.height / 2 - textStart * 0.3);
             context.translate(canvas.width / 2, canvas.height / 2);
             context.rotate((Math.PI * 2) / 3);
             context.translate(-canvas.width / 2, -canvas.height / 2);
@@ -910,13 +854,7 @@ export class D2DiceGeometry extends DiceGeometry {
 
         for (let i = 0; i < sidesCount; i++) {
             const nextI = (i + 1) % sidesCount;
-            this.faces.push([
-                i * 2,
-                i * 2 + 1,
-                nextI * 2 + 1,
-                nextI * 2,
-                -1,
-            ]);
+            this.faces.push([i * 2, i * 2 + 1, nextI * 2 + 1, nextI * 2, -1]);
         }
     }
 }

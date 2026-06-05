@@ -7,7 +7,7 @@ export default function DicePanel() {
     const [isOpen, setIsOpen] = useState(false);
 
     const togglePanel = useCallback(() => {
-        setIsOpen(prev => !prev);
+        setIsOpen((prev) => !prev);
     }, []);
 
     return (

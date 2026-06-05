@@ -8,16 +8,9 @@ type SvgAssetProps = {
     svgString: string;
     className?: string;
     onClick?: () => void;
-}
+};
 
-export function SvgImage({
-    svgString,
-    style = {},
-    mode = 'image',
-    alt = '',
-    className = '',
-    onClick,
-}: SvgAssetProps) {
+export function SvgImage({ svgString, style = {}, mode = 'image', alt = '', className = '', onClick }: SvgAssetProps) {
     const uri = `data:image/svg+xml;base64,${btoa(svgString)}`;
     const data = `url("${uri}")`;
 
@@ -82,8 +75,5 @@ export function SvgImage({
 }
 
 export function useDiceColors(primaryColor: string, shades: number[]) {
-    return useMemo(() =>
-        shades.map(shade => blendColors(primaryColor, '#000000', shade)),
-    [primaryColor, shades],
-    );
+    return useMemo(() => shades.map((shade) => blendColors(primaryColor, '#000000', shade)), [primaryColor, shades]);
 }

@@ -1,12 +1,4 @@
-import {
-    Body,
-    ContactMaterial,
-    Material,
-    NaiveBroadphase,
-    Plane,
-    Vec3,
-    World,
-} from 'cannon-es';
+import { Body, ContactMaterial, Material, NaiveBroadphase, Plane, Vec3, World } from 'cannon-es';
 import type { DiceShape } from './shapes';
 
 export class PhysicsWorld {
@@ -17,7 +9,10 @@ export class PhysicsWorld {
     lastCallTime = 0;
     private barriers: Body[] = [];
 
-    constructor(public WIDTH: number, public HEIGHT: number) {
+    constructor(
+        public WIDTH: number,
+        public HEIGHT: number,
+    ) {
         // Use stronger gravity so dice hit the table quickly but stay in view
         this.world = new World({ gravity: new Vec3(0, 0, -1000) });
         this.world.broadphase = new NaiveBroadphase();
@@ -69,7 +64,7 @@ export class PhysicsWorld {
     }
 
     updateBarriers(cameraZ: number, fovDeg: number, aspect: number): void {
-        this.barriers.forEach(b => this.world.removeBody(b));
+        this.barriers.forEach((b) => this.world.removeBody(b));
         this.barriers = [];
 
         const fovRad = (fovDeg * Math.PI) / 180;

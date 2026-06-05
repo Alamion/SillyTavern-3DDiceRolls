@@ -11,14 +11,20 @@ import {
     type DiceGeometryData,
 } from './geometries';
 import { type DiceRendererConfig } from './renderer';
+import { warn } from '../../utils/logging';
 
 interface DiceGeometryInstance {
-    create(): { clone(): DiceGeometryData }
-    values: number[]
-    labels: string[]
+    create(): { clone(): DiceGeometryData };
+    values: number[];
+    labels: string[];
 }
 
-type DiceGeometryClass = new (w: number, h: number, options: { diceColor: string; textColor: string }, scaler: number) => DiceGeometryInstance;
+type DiceGeometryClass = new (
+    w: number,
+    h: number,
+    options: { diceColor: string; textColor: string },
+    scaler: number,
+) => DiceGeometryInstance;
 
 const GEOMETRY_CLASSES: Record<number, DiceGeometryClass> = {
     2: D2DiceGeometry,
@@ -32,16 +38,12 @@ const GEOMETRY_CLASSES: Record<number, DiceGeometryClass> = {
 };
 
 export interface DiceFactoryConfig extends DiceRendererConfig {
-    diceColor: string
-    textColor: string
-    scaler: number
+    diceColor: string;
+    textColor: string;
+    scaler: number;
 }
 
-function getOrCreateGeometry(
-    sides: number,
-    config: DiceFactoryConfig,
-    fudge?: boolean,
-): DiceGeometryData | null {
+function getOrCreateGeometry(sides: number, config: DiceFactoryConfig, fudge?: boolean): DiceGeometryData | null {
     const GeometryClass = GEOMETRY_CLASSES[sides];
     if (!GeometryClass) {
         return null;
@@ -58,10 +60,10 @@ function getOrCreateGeometry(
         // Override face labels for fudge symbols ('-', '0', '+') on a D6 cube
         // Material array indices: 0=edge, 1=unused, 2-7=six faces
         g.labels[2] = '-';
-        g.labels[3] = '0';
+        g.labels[3] = ' ';
         g.labels[4] = '+';
         g.labels[5] = '-';
-        g.labels[6] = '0';
+        g.labels[6] = ' ';
         g.labels[7] = '+';
         g.values = [-1, 0, 1, -1, 0, 1];
     }
@@ -75,7 +77,7 @@ function getOrCreateGeometry(
     if (fudge) {
         geom.values = g.values;
     } else {
-        geom.values = geom.values.map(v => v + 1);
+        geom.values = geom.values.map((v) => v + 1);
     }
 
     return geom;
@@ -101,41 +103,40 @@ export function prepareDiceGeometries(
         const physicalPerLogical = isD100 ? 2 : 1;
         const totalPhysicalDice = group.count * physicalPerLogical;
 
-        groupSizes.push(totalPhysicalDice);
+        let actualCount = 0;
 
         for (let i = 0; i < totalPhysicalDice; i++) {
-            // For d100, alternate: tens die (i%2==0) uses D100DiceGeometry (face labels 00-90),
-            // ones die (i%2==1) uses D10DiceGeometry (face labels 0-9).
             const effectiveSides = isD100 && i % 2 === 0 ? 100 : physicalSides;
             const geometry = getOrCreateGeometry(effectiveSides, factoryConfig, group.fudge);
             if (geometry) {
                 geometries.push(geometry);
+                actualCount++;
+            } else {
+                warn(
+                    `3D geometry not available for ${effectiveSides}-sided die — ` +
+                        `group ${diceGroups.indexOf(group)} will be skipped in physics`,
+                    'Factory',
+                );
             }
         }
+
+        groupSizes.push(actualCount);
     }
 
     return { geometries, groupSizes };
 }
 
 export class DiceFactory {
-    constructor(
-        private _config: DiceFactoryConfig,
-    ) {}
+    constructor(private _config: DiceFactoryConfig) {}
 
     prepareGeometries(diceGroups: DiceGroup[]): { geometries: DiceGeometryData[]; groupSizes: number[] } {
         return prepareDiceGeometries(diceGroups, this._config);
     }
 
-    dispose(): void {
-    }
+    dispose(): void {}
 }
 
-export function create3DDiceRoll(
-    _width: number,
-    _height: number,
-    diceColor: string,
-    textColor: string,
-): DiceFactory {
+export function create3DDiceRoll(_width: number, _height: number, diceColor: string, textColor: string): DiceFactory {
     return new DiceFactory({
         diceColor,
         textColor,

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseToAST } from '../../src/dice-logic/dice-parser';
-import { evaluateDiceAST, detectExplosion } from '../../src/dice-logic/dice-evaluator';
+import { parseToAST, evaluateDiceAST, detectExplosion } from '../../src/dice-logic';
 
 function mockRandom(...values: number[]): () => number {
     let i = 0;
@@ -24,7 +23,7 @@ describe('Evaluator - explosion', () => {
         const result = evaluate('4d10!>8', 0.95, 0.1, 0.5, 0.85, 0.4, 0.2);
         expect(result.total).toBe(35);
         expect(result.diceGroups[0].rolls).toHaveLength(6);
-        const exploded = result.diceGroups[0].rolls.filter(r => r.exploded);
+        const exploded = result.diceGroups[0].rolls.filter((r) => r.exploded);
         expect(exploded).toHaveLength(2);
     });
 
@@ -118,7 +117,10 @@ describe('Evaluator - explosion', () => {
 
     it('detectExplosion finds exploding dice', () => {
         const ast = parseToAST('3d6!');
-        if (ast.type !== 'DiceGroup') { expect.fail(); return; }
+        if (ast.type !== 'DiceGroup') {
+            expect.fail();
+            return;
+        }
         const rolls = [
             { sides: 6, value: 6, dropped: false },
             { sides: 6, value: 3, dropped: false },

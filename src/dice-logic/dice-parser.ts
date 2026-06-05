@@ -1,6 +1,6 @@
-import {LexerToken, tokenize} from './dice-lexer';
-import type {ASTNode, ComparePoint, DiceModifiers, TokenType} from './types';
-import {debug, warn} from '../utils/logging';
+import { LexerToken, tokenize } from './dice-lexer';
+import type { ASTNode, ComparePoint, DiceModifiers, TokenType } from './types';
+import { debug, warn } from '../utils/logging';
 
 const PRECEDENCE: Record<string, number> = {
     '^': 4,
@@ -78,9 +78,18 @@ function parseAddSub(stream: TokenStream): ASTNode {
 function parseMulDivMod(stream: TokenStream): ASTNode {
     let left = parseExponent(stream);
 
-    while (stream.peek() && (stream.peek()!.type === 'MULTIPLY' || stream.peek()!.type === 'DIVIDE' || stream.peek()!.type === 'MODULO')) {
+    while (
+        stream.peek() &&
+        (stream.peek()!.type === 'MULTIPLY' || stream.peek()!.type === 'DIVIDE' || stream.peek()!.type === 'MODULO')
+    ) {
         const operatorToken = stream.consume()!;
-        const operator = (operatorToken.type === 'MULTIPLY' ? '*' : operatorToken.type === 'DIVIDE' ? '/' : '%') as '+' | '-' | '*' | '/' | '%' | '^';
+        const operator = (operatorToken.type === 'MULTIPLY' ? '*' : operatorToken.type === 'DIVIDE' ? '/' : '%') as
+            | '+'
+            | '-'
+            | '*'
+            | '/'
+            | '%'
+            | '^';
         const right = parseExponent(stream);
         left = { type: 'BinaryOp', operator, left, right };
     }
@@ -128,7 +137,10 @@ function parsePrimary(stream: TokenStream): ASTNode {
 
     if (token.type === 'NUMBER') {
         stream.consume();
-        return { type: 'NumericLiteral', value: typeof token.value === 'number' ? token.value : parseInt(token.value as string, 10) };
+        return {
+            type: 'NumericLiteral',
+            value: typeof token.value === 'number' ? token.value : parseInt(token.value as string, 10),
+        };
     }
 
     if (token.type === 'DICE') {
@@ -172,9 +184,12 @@ function parseComparePoint(stream: TokenStream): ComparePoint | undefined {
     if (next && isCompareType(next.type)) {
         const opToken = stream.consume()!;
         const valueToken = stream.peek();
-        const value = valueToken && valueToken.type === 'NUMBER'
-            ? (typeof valueToken.value === 'number' ? valueToken.value : parseInt(valueToken.value as string, 10))
-            : 0;
+        const value =
+            valueToken && valueToken.type === 'NUMBER'
+                ? typeof valueToken.value === 'number'
+                    ? valueToken.value
+                    : parseInt(valueToken.value as string, 10)
+                : 0;
         if (valueToken && valueToken.type === 'NUMBER') {
             stream.consume();
         }
@@ -200,6 +215,7 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
     const customFaces: number[] | undefined = diceValue.customFaces;
 
     const modifiers: DiceModifiers = {};
+    let forcedValues: number[] | undefined;
 
     const parseExplode = (tok: LexerToken) => {
         const text = tok.text;
@@ -268,6 +284,24 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
             break;
         }
 
+        // Forced values (@N,N,N,..) — parse values, then continue for remaining modifiers
+        if (peekToken.type === 'AT') {
+            stream.consume();
+            forcedValues = [];
+            while (stream.peek() && stream.peek()!.type !== 'END') {
+                const tok = stream.peek()!;
+                if (tok.type === 'NUMBER') {
+                    stream.consume();
+                    forcedValues.push(typeof tok.value === 'number' ? tok.value : parseInt(tok.value as string, 10));
+                } else if (tok.type === 'COMMA') {
+                    stream.consume();
+                } else {
+                    break;
+                }
+            }
+            continue;
+        }
+
         switch (peekToken.type) {
             case 'MOD_EXPLODE':
                 parseExplode(stream.consume()!);
@@ -299,7 +333,9 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
                 const tok = stream.consume()!;
                 modifiers.min = hasEmbeddedNumber(tok)
                     ? parseModifierValue(tok)
-                    : (stream.peek()?.type === 'NUMBER' ? parseModifierValue(stream.consume()!) : 1);
+                    : stream.peek()?.type === 'NUMBER'
+                      ? parseModifierValue(stream.consume()!)
+                      : 1;
                 break;
             }
 
@@ -307,7 +343,25 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
                 const tok = stream.consume()!;
                 modifiers.max = hasEmbeddedNumber(tok)
                     ? parseModifierValue(tok)
-                    : (stream.peek()?.type === 'NUMBER' ? parseModifierValue(stream.consume()!) : 1);
+                    : stream.peek()?.type === 'NUMBER'
+                      ? parseModifierValue(stream.consume()!)
+                      : 1;
+                break;
+            }
+
+            case 'MOD_CSB': {
+                stream.consume();
+                const cp = parseComparePoint(stream);
+                modifiers.criticalSuccess = cp || true;
+                modifiers.criticalSuccessBotch = true;
+                break;
+            }
+
+            case 'MOD_CFB': {
+                stream.consume();
+                const cp = parseComparePoint(stream);
+                modifiers.criticalFailure = cp || true;
+                modifiers.criticalFailureBotch = true;
                 break;
             }
 
@@ -358,17 +412,24 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
         modifiers,
         customFaces,
         fudge,
+        forcedValues: forcedValues && forcedValues.length > 0 ? forcedValues : undefined,
     };
 }
 
 export function parseToAST(input: string): ASTNode {
     const tokens = tokenize(input);
-    debug('Tokens:', tokens.map(t => ({ type: t.type, text: t.text })));
+    debug(
+        'Tokens:',
+        tokens.map((t) => ({ type: t.type, text: t.text })),
+    );
     const stream = new TokenStream(tokens);
     return parseExpression(stream);
 }
 
-export function parseDiceNotation(notation: string): { expressions: Array<{ type: 'dice' | 'number'; value: unknown; operation: '+' | '-' | '*' | '/' | '%' | '^' }>; original: string } {
+export function parseDiceNotation(notation: string): {
+    expressions: Array<{ type: 'dice' | 'number'; value: unknown; operation: '+' | '-' | '*' | '/' | '%' | '^' }>;
+    original: string;
+} {
     try {
         const ast = parseToAST(notation);
         const expressions = flattenAST(ast, '+');
@@ -379,7 +440,10 @@ export function parseDiceNotation(notation: string): { expressions: Array<{ type
     }
 }
 
-function flattenAST(node: ASTNode, operation: '+' | '-' | '*' | '/' | '%' | '^' = '+'): Array<{ type: 'dice' | 'number'; value: unknown; operation: '+' | '-' | '*' | '/' | '%' | '^' }> {
+function flattenAST(
+    node: ASTNode,
+    operation: '+' | '-' | '*' | '/' | '%' | '^' = '+',
+): Array<{ type: 'dice' | 'number'; value: unknown; operation: '+' | '-' | '*' | '/' | '%' | '^' }> {
     if (node.type === 'NumericLiteral') {
         return [{ type: 'number', value: node.value, operation }];
     }
@@ -395,7 +459,7 @@ function flattenAST(node: ASTNode, operation: '+' | '-' | '*' | '/' | '%' | '^' 
     }
 
     if (node.type === 'UnaryOp') {
-        const op = node.operator === '-' ? '-' as const : '+' as const;
+        const op = node.operator === '-' ? ('-' as const) : ('+' as const);
         return flattenAST(node.operand, op);
     }
 
@@ -407,6 +471,7 @@ function flattenAST(node: ASTNode, operation: '+' | '-' | '*' | '/' | '%' | '^' 
 }
 
 export function validateNotation(notation: string): boolean {
+    if (!notation || !notation.trim()) return false;
     try {
         const tokens = tokenize(notation);
         for (const token of tokens) {

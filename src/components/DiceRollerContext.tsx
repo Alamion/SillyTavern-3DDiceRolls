@@ -49,21 +49,26 @@ function loadHistoryFromChat(): HistoryEntry[] {
         const context = getContext();
         const raw = context?.chatMetadata?.[MODULE_NAME];
         if (Array.isArray(raw)) return raw.slice(0, MAX_HISTORY) as HistoryEntry[];
-    } catch { /* ignore */ }
+    } catch {
+        /* ignore */
+    }
     return [];
 }
 
-let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-
-function saveHistoryToChat(history: HistoryEntry[]): void {
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
+function saveHistoryToChat(
+    history: HistoryEntry[],
+    saveTimeoutRef: { current: ReturnType<typeof setTimeout> | null },
+): void {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
         try {
             const context = getContext();
             if (!context?.chatMetadata?.chat_id_hash) return;
             context.chatMetadata[MODULE_NAME] = history.slice(0, MAX_HISTORY);
             context.saveMetadata().catch(() => {});
-        } catch { /* ignore */ }
+        } catch {
+            /* ignore */
+        }
     }, 500);
 }
 
@@ -74,22 +79,26 @@ function loadExtensionData(): { favorites: FavoriteNotation[]; recentNotations: 
         const data = context?.extensionSettings?.[MODULE_NAME] as Record<string, unknown> | undefined;
         if (!data) return { favorites: [], recentNotations: [] };
         return {
-            favorites: Array.isArray(data.favorites) ? data.favorites as FavoriteNotation[] : [],
-            recentNotations: Array.isArray(data.recentNotations) ? data.recentNotations as string[] : [],
+            favorites: Array.isArray(data.favorites) ? (data.favorites as FavoriteNotation[]) : [],
+            recentNotations: Array.isArray(data.recentNotations) ? (data.recentNotations as string[]) : [],
         };
-    } catch { return { favorites: [], recentNotations: [] }; }
+    } catch {
+        return { favorites: [], recentNotations: [] };
+    }
 }
 
 function saveExtensionData(favorites: FavoriteNotation[], recentNotations: string[]): void {
     try {
         const context = getContext();
         if (!context?.extensionSettings) return;
-        const data = context.extensionSettings[MODULE_NAME] as Record<string, unknown> ?? {};
+        const data = (context.extensionSettings[MODULE_NAME] as Record<string, unknown>) ?? {};
         data.favorites = favorites;
         data.recentNotations = recentNotations;
         context.extensionSettings[MODULE_NAME] = data;
         if (context.saveSettingsDebounced) context.saveSettingsDebounced();
-    } catch { /* ignore */ }
+    } catch {
+        /* ignore */
+    }
 }
 
 /* ─── Provider ─── */
@@ -110,6 +119,7 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
     historyRef.current = history;
     const favoritesRef = useRef(favorites);
     favoritesRef.current = favorites;
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     /* Subscribe to settings changes */
     useEffect(() => subscribeSettings(setSettings), []);
@@ -131,30 +141,43 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
             setExpandedIds(loaded.length > 0 ? [loaded[0].id] : []);
         };
         context.eventSource.on(context.eventTypes.CHAT_CHANGED, handler);
-        return () => { context.eventSource.off(context.eventTypes.CHAT_CHANGED, handler); };
+        return () => {
+            context.eventSource.off(context.eventTypes.CHAT_CHANGED, handler);
+        };
     }, []);
 
     /* Listen for roll results */
-    useEffect(() => onRollResult((result) => {
-        const entry: HistoryEntry = {
-            id: newId(),
-            timestamp: Date.now(),
-            result,
-        };
-        setHistory(prev => [entry, ...prev].slice(0, MAX_HISTORY));
-        setExpandedIds([entry.id]);
+    useEffect(
+        () =>
+            onRollResult((result) => {
+                const entry: HistoryEntry = {
+                    id: newId(),
+                    timestamp: Date.now(),
+                    result,
+                };
+                setHistory((prev) => [entry, ...prev].slice(0, MAX_HISTORY));
+                setExpandedIds([entry.id]);
 
-        /* Update recent notations (global) */
-        setRecentNotations(prev => {
-            return [result.notation, ...prev.filter(n => n !== result.notation)].slice(0, MAX_RECENT_NOTATIONS);
-        });
-    }), []);
+                /* Update recent notations (global) */
+                setRecentNotations((prev) => {
+                    return [result.notation, ...prev.filter((n) => n !== result.notation)].slice(
+                        0,
+                        MAX_RECENT_NOTATIONS,
+                    );
+                });
+            }),
+        [],
+    );
 
     /* Persist history on change */
-    useEffect(() => { saveHistoryToChat(historyRef.current); }, [history]);
+    useEffect(() => {
+        saveHistoryToChat(historyRef.current, saveTimeoutRef);
+    }, [history]);
 
     /* Persist extension data on favorites/recent changes */
-    useEffect(() => { saveExtensionData(favorites, recentNotations); }, [favorites, recentNotations]);
+    useEffect(() => {
+        saveExtensionData(favorites, recentNotations);
+    }, [favorites, recentNotations]);
 
     /* ─── Actions ─── */
 
@@ -168,26 +191,27 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
     }, []);
 
     const toggleFavorite = useCallback((notation: string) => {
-        setFavorites(prev => {
-            const existing = prev.find(f => f.notation === notation);
-            if (existing) return prev.filter(f => f.id !== existing.id);
-            return [{
-                id: newId(),
-                notation,
-                label: notation,
-                lastUsed: Date.now(),
-            }, ...prev];
+        setFavorites((prev) => {
+            const existing = prev.find((f) => f.notation === notation);
+            if (existing) return prev.filter((f) => f.id !== existing.id);
+            return [
+                {
+                    id: newId(),
+                    notation,
+                    label: notation,
+                    lastUsed: Date.now(),
+                },
+                ...prev,
+            ];
         });
     }, []);
 
     const isFavorite = useCallback((notation: string): boolean => {
-        return favoritesRef.current.some(f => f.notation === notation);
+        return favoritesRef.current.some((f) => f.notation === notation);
     }, []);
 
     const toggleExpand = useCallback((id: string) => {
-        setExpandedIds(prev =>
-            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id],
-        );
+        setExpandedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
     }, []);
 
     const value: DiceRollerContextValue = {
@@ -207,9 +231,5 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
         toggleExpand,
     };
 
-    return (
-        <DiceRollerContext.Provider value={value}>
-            {children}
-        </DiceRollerContext.Provider>
-    );
+    return <DiceRollerContext.Provider value={value}>{children}</DiceRollerContext.Provider>;
 }

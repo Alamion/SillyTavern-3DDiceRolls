@@ -19,13 +19,16 @@ const WodTab = memo(function WodTab() {
         setNotationInput(handleDiceNotation(notationInput, `d10>=${wodDifficulty}`, true, wodDifficulty));
     }, [notationInput, wodDifficulty, setNotationInput]);
 
-    const onRemove = useCallback((_config: DiceConfig, e: React.MouseEvent) => {
-        e.preventDefault();
-        setNotationInput(handleDiceNotation(notationInput, `d10>=${wodDifficulty}`, false, wodDifficulty));
-    }, [notationInput, wodDifficulty, setNotationInput]);
+    const onRemove = useCallback(
+        (_config: DiceConfig, e: React.MouseEvent) => {
+            e.preventDefault();
+            setNotationInput(handleDiceNotation(notationInput, `d10>=${wodDifficulty}`, false, wodDifficulty));
+        },
+        [notationInput, wodDifficulty, setNotationInput],
+    );
 
-    const decrement = useCallback(() => setWodDifficulty(d => Math.max(1, d - 1)), []);
-    const increment = useCallback(() => setWodDifficulty(d => Math.min(10, d + 1)), []);
+    const decrement = useCallback(() => setWodDifficulty((d) => Math.max(1, d - 1)), []);
+    const increment = useCallback(() => setWodDifficulty((d) => Math.min(10, d + 1)), []);
 
     return (
         <div className="ddr-dice-tab-body">

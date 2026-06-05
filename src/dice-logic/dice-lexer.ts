@@ -13,6 +13,8 @@ const lexer: Lexer = moo.compile({
     EXPONENT: '^',
     LPAREN: '(',
     RPAREN: ')',
+    AT: '@',
+    COMMA: ',',
     MOD_EXPLODE: /!!p|!!|!p|!/,
     MOD_REROLL: /ro\d*|r\d*/,
     MOD_UNIQUE: /uo\d*|u\d*/,
@@ -21,6 +23,8 @@ const lexer: Lexer = moo.compile({
     MOD_SORT: /s[ad]?/,
     MOD_MIN: /min\d*/,
     MOD_MAX: /max\d*/,
+    MOD_CSB: 'csb',
+    MOD_CFB: 'cfb',
     MOD_CS: 'cs',
     MOD_CF: 'cf',
     MOD_FAILURE: 'f',
@@ -34,18 +38,18 @@ const lexer: Lexer = moo.compile({
 });
 
 export interface DiceTokenValue {
-    count: number
-    sides: number
-    fudge: boolean
-    customFaces?: number[]
+    count: number;
+    sides: number;
+    fudge: boolean;
+    customFaces?: number[];
 }
 
 export interface LexerToken {
-    type: TokenType
-    value: string | number | number[] | DiceTokenValue
-    text: string
-    line: number
-    col: number
+    type: TokenType;
+    value: string | number | number[] | DiceTokenValue;
+    text: string;
+    line: number;
+    col: number;
 }
 
 function isFudgeDice(text: string): boolean {
@@ -75,11 +79,11 @@ function parseCustomFaces(text: string): number[] {
     const bracketStart = text.indexOf('[');
     if (bracketStart === -1) return [];
     const content = text.slice(bracketStart + 1, -1);
-    const parts = content.split(',').map(s => s.trim());
+    const parts = content.split(',').map((s) => s.trim());
     const result: number[] = [];
     for (const p of parts) {
         if (p.includes('-')) {
-            const [start, end] = p.split('-').map(s => parseInt(s.trim(), 10));
+            const [start, end] = p.split('-').map((s) => parseInt(s.trim(), 10));
             if (!isNaN(start) && !isNaN(end)) {
                 const min = Math.min(start, end);
                 const max = Math.max(start, end);
@@ -117,6 +121,10 @@ function mapTokenType(token: Token): TokenType {
             return 'RPAREN';
         case 'DICE':
             return 'DICE';
+        case 'AT':
+            return 'AT';
+        case 'COMMA':
+            return 'COMMA';
         case 'MOD_EXPLODE':
             return 'MOD_EXPLODE';
         case 'MOD_REROLL':
@@ -133,6 +141,10 @@ function mapTokenType(token: Token): TokenType {
             return 'MOD_MIN';
         case 'MOD_MAX':
             return 'MOD_MAX';
+        case 'MOD_CSB':
+            return 'MOD_CSB';
+        case 'MOD_CFB':
+            return 'MOD_CFB';
         case 'MOD_CS':
             return 'MOD_CS';
         case 'MOD_CF':

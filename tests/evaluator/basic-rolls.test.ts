@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseToAST } from '../../src/dice-logic/dice-parser';
-import { evaluateDiceAST } from '../../src/dice-logic/dice-evaluator';
-import type { DiceRoll } from '../../src/dice-logic/types';
+import { parseToAST, evaluateDiceAST, getRawDiceValues, rollDices } from '../../src/dice-logic';
+import type { DiceRoll, ASTNode, DiceGroupNode } from '../../src/dice-logic';
 
 function mockRandom(...values: number[]): () => number {
     let i = 0;
@@ -64,7 +63,7 @@ describe('Evaluator - fudge dice', () => {
     it('evaluates 4dF with known values', () => {
         const result = evaluate('4dF', 0.0, 0.4, 0.6, 0.9);
         expect(result.total).toBe(0);
-        expect(result.diceGroups[0].rolls.map(r => r.value)).toEqual([-1, 0, 0, 1]);
+        expect(result.diceGroups[0].rolls.map((r) => r.value)).toEqual([-1, 0, 0, 1]);
     });
 
     it('evaluates 1dF to -1, 0, or 1', () => {
@@ -81,6 +80,57 @@ describe('Evaluator - fudge dice', () => {
     it('correctly sums negative fudge values', () => {
         const result = evaluate('4dF', 0.0, 0.1, 0.2, 0.4);
         expect(result.total).toBe(-3);
+    });
+});
+
+describe('Evaluator - forced rolls (@)', () => {
+    it('2d20@20,1 uses forced values', () => {
+        const ast = parseToAST('2d20@20,1');
+        const result = evaluateDiceAST(ast, '2d20@20,1');
+        expect(result.total).toBe(21);
+        expect(result.diceGroups[0].rolls[0].value).toBe(20);
+        expect(result.diceGroups[0].rolls[1].value).toBe(1);
+    });
+
+    it('6d6@4,4,4,4,4,4 all dice show 4', () => {
+        const ast = parseToAST('6d6@4,4,4,4,4,4');
+        const result = evaluateDiceAST(ast, '6d6@4,4,4,4,4,4');
+        expect(result.total).toBe(24);
+        result.diceGroups[0].rolls.forEach((r) => {
+            expect(r.value).toBe(4);
+        });
+    });
+
+    it('forced values work with keep modifier: 4d6@6,1,6,1kh3', () => {
+        const ast = parseToAST('4d6@6,1,6,1kh3');
+        const result = evaluateDiceAST(ast, '4d6@6,1,6,1kh3');
+        expect(result.total).toBe(13);
+        expect(result.diceGroups[0].keptRolls).toHaveLength(3);
+    });
+
+    it('forced values throw on count mismatch', () => {
+        const ast = parseToAST('2d6@1');
+        expect(() => evaluateDiceAST(ast, '2d6@1')).toThrow(/count mismatch/);
+    });
+
+    it('forced values work through rollDices pipeline', () => {
+        const result = rollDices('2d20@20,1');
+        expect(result.total).toBe(21);
+        expect(result.diceGroups[0].rolls[0].value).toBe(20);
+    });
+
+    it('getRawDiceValues respects forced values', () => {
+        const ast = parseToAST('2d20@20,1');
+        function findDice(n: ASTNode): ASTNode {
+            if (n.type === 'DiceGroup') return n;
+            if (n.type === 'BinaryOp') return findDice(n.left) || findDice(n.right);
+            if (n.type === 'UnaryOp') return findDice(n.operand);
+            if (n.type === 'Parenthesized') return findDice(n.expression);
+            return n;
+        }
+        const diceNode = findDice(ast);
+        const raw = getRawDiceValues(diceNode as DiceGroupNode);
+        expect(raw.map((r) => r.value)).toEqual([20, 1]);
     });
 });
 

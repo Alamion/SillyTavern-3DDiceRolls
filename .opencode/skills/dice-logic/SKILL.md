@@ -4,8 +4,8 @@ description: Deep reference for dice notation lexer/parser architecture (22 toke
 license: AGPL-3.0
 compatibility: opencode
 metadata:
-  domain: dice-logic
-  audience: developers
+    domain: dice-logic
+    audience: developers
 ---
 
 # Dice Logic Architecture
@@ -33,19 +33,24 @@ Min/Max always apply (including pre-generated values). Explode/Reroll/Unique onl
 ## Lexer/Parser Architecture
 
 ### Token Types (Generalized)
+
 22 token types replace 39+ specific types:
+
 - `DICE`, `NUMBER`, `PLUS`, `MINUS`, `MULTIPLY`, `DIVIDE`, `MODULO`, `POW`, `LPAREN`, `RPAREN`, `END`
 - Modifier tokens: `MOD_EXPLODE` (`!`, `!!`, `!p`, `!!p`), `MOD_REROLL` (`r`, `ro`, `r1`, etc.), `MOD_KEEP` (`kh`, `kl`, `k`), `MOD_DROP` (`dh`, `dl`, `d`), `MOD_SORT` (`s`, `sa`, `sd`), `MOD_UNIQUE` (`u`, `uo`), `MOD_MIN`, `MOD_MAX`, `MOD_CS`, `MOD_CF`, `MOD_FAILURE`
 - Compare operators: `GT`, `GTE`, `LT`, `LTE`, `EQ`, `NEQ` (`<>` only)
 
 ### Key Rules
+
 - **No NOT_EQ token**: `!=` is decomposed as `MOD_EXPLODE` + `EQ` (explosion with compare `=`). Users needing not-equal must use `<>`.
 - **Lexer ordering**: DICE → Modifier tokens → Compare operators. Moo's longest-match + first-defined resolves ties (e.g., `4d6` then `d2` as DICE, not MOD_DROP).
 - **DICE-to-DROP fallback**: A DICE token matching `/^d\d+$/` in the modifier loop is converted to MOD_DROP (handles `4d6d2`).
 - **Modifier token text** carries variant info (e.g., `!!p` → `{ compounding: true, penetrating: true }`).
 
 ### MockRandom Consumption Order
+
 When testing with `evaluate('2d6r1', 0.1, 0.5, 0.8)`:
+
 1. ALL dice are initialized first: die0=0.1→1, die1=0.5→4
 2. THEN modifiers run: reroll die0→0.8→5
 3. Final: die0=5, die1=4. Array: `[5, 4]`, total=9
@@ -57,6 +62,7 @@ This order matters because `Math.floor(0.5*6)+1 = 4` (not 3).
 The project follows a clean separation between the **Roll Engine** (logic) and **Render Engine** (visualization):
 
 **Roll Engine** (`dice-evaluator.ts`):
+
 - Parses dice notation to AST via `parseToAST()`
 - Evaluates AST to produce final `RollResult` with all modifiers applied
 - Handles modifiers: reroll, explode, keep/drop, sort, conditions
@@ -65,12 +71,14 @@ The project follows a clean separation between the **Roll Engine** (logic) and *
 - Pre-generated values (3D path) skip explode/reroll/unique but still apply min, max, keep/drop, target, critical, and sort
 
 **Render Engine** (`renderer/`):
+
 - Pure visualization layer - no roll logic
 - Animates dice physics via Three.js + Cannon-es
 - Supports forced rolls via `swapFace()` method that rotates dice to show target values
 - Returns target values from physics simulation for verification
 
 **Orchestration** (`roll-orchestrator.ts`):
+
 1. Parse notation to AST
 2. Evaluate AST via Roll Engine to get final result (source of truth)
 3. Extract raw values from AST for 3D dice
@@ -79,4 +87,5 @@ The project follows a clean separation between the **Roll Engine** (logic) and *
 6. Final result returned from Roll Engine, not from renderer
 
 **Complete modifiers reference**:
+
 - can be found in `.opencode/skills/dice-logic/references/modifiers.md`

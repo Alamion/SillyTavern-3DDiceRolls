@@ -9,7 +9,13 @@ interface DiceButtonProps {
     onRemove: (config: DiceConfig, e: React.MouseEvent) => void;
 }
 
-const DiceButton = memo(function DiceButton({ config, primaryColor, secondaryColor, onAdd, onRemove }: DiceButtonProps) {
+const DiceButton = memo(function DiceButton({
+    config,
+    primaryColor,
+    secondaryColor,
+    onAdd,
+    onRemove,
+}: DiceButtonProps) {
     return (
         <button
             className="ddr-dice-pool-item"

@@ -9,6 +9,8 @@ interface DiceSvgProps {
     style?: React.CSSProperties;
     className?: string;
     onClick?: () => void;
+    d100Tens?: string;
+    d100Ones?: string;
 }
 
 interface ShapePath {
@@ -24,18 +26,27 @@ interface DiceShape {
     shades?: number[];
 }
 
-function renderStandardSvg(primaryColor: string, colors: string[], shape: DiceShape, value?: number | string, secondaryColor?: string): string {
+function renderStandardSvg(
+    primaryColor: string,
+    colors: string[],
+    shape: DiceShape,
+    value?: number | string,
+    secondaryColor?: string,
+): string {
     const textX = shape.textX ?? 50;
     const textY = shape.textY ?? 60;
     const fontSize = shape.fontSize ?? 24;
 
-    const pathElements = shape.paths.map((p) => {
-        const fill = p.shadeIndex !== undefined ? colors[p.shadeIndex] : primaryColor;
-        return `    <path d="${p.d}" fill="${fill}"/>`;
-    }).join('\n');
+    const pathElements = shape.paths
+        .map((p) => {
+            const fill = p.shadeIndex !== undefined ? colors[p.shadeIndex] : primaryColor;
+            return `    <path d="${p.d}" fill="${fill}"/>`;
+        })
+        .join('\n');
 
-    const textElement = value != null
-        ? `
+    const textElement =
+        value != null
+            ? `
       <text
         x="${textX}"
         y="${textY}"
@@ -45,7 +56,7 @@ function renderStandardSvg(primaryColor: string, colors: string[], shape: DiceSh
         font-weight="bold"
         font-family="Arial, sans-serif"
       >${value}</text>`
-        : '';
+            : '';
 
     return `
   <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -54,11 +65,18 @@ ${textElement}
   </svg>`.trim();
 }
 
-function renderD2Svg(primaryColor: string, _colors: string[], value?: number | string, secondaryColor?: string): string {
+function renderD2Svg(
+    primaryColor: string,
+    _colors: string[],
+    value?: number | string,
+    secondaryColor?: string,
+): string {
     return `
   <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="50" cy="40" r="38" fill="${primaryColor}"/>
-  ${value != null ? `
+  ${
+      value != null
+          ? `
       <text
         x="50"
         y="50"
@@ -68,18 +86,32 @@ function renderD2Svg(primaryColor: string, _colors: string[], value?: number | s
         font-weight="bold"
         font-family="Arial, sans-serif"
       >${value}</text>
-    ` : ''}
+    `
+          : ''
+  }
   </svg>`.trim();
 }
 
-function renderD100Svg(primaryColor: string, colors: string[], value?: number | string, secondaryColor?: string): string {
-    let str_value_1 = (value || '').toString();
-    let str_value_2 = (value || '').toString();
-    if (typeof value === 'number' && value <= 100) {
-        const value_1 = Math.floor(value / 10) * 10;
-        str_value_1 = (value_1 === 0) || (value_1 === 100) ? '00' : value_1.toString();
-        const value_2 = value % 10;
-        str_value_2 = value_2.toString();
+function renderD100Svg(
+    primaryColor: string,
+    colors: string[],
+    value?: number | string,
+    secondaryColor?: string,
+    d100Tens?: string,
+    d100Ones?: string,
+): string {
+    let str_value_1: string;
+    let str_value_2: string;
+    if (d100Tens != null && d100Ones != null) {
+        str_value_1 = d100Tens;
+        str_value_2 = d100Ones;
+    } else if (typeof value === 'number' && value <= 100) {
+        const rawTens = Math.floor(value / 10) * 10;
+        str_value_1 = rawTens === 0 || rawTens === 100 ? '00' : rawTens.toString();
+        str_value_2 = (value % 10).toString();
+    } else {
+        str_value_1 = (value || '').toString();
+        str_value_2 = (value || '').toString();
     }
     const pc = primaryColor;
     const c1 = colors[0];
@@ -100,7 +132,9 @@ function renderD100Svg(primaryColor: string, colors: string[], value?: number | 
         <path d="M 52,12 L 13,42 L 13,60.5 L 27,60.5 Z" fill="${c1}"/>
         <path d="M 13,60.5 L 52,88 L 91,60.5 L 77,60.5 L 52,73 L 27,60.5 Z" fill="${c2}"/>
     </g>
-  ${str_value_1 ? `
+  ${
+      str_value_1
+          ? `
       <text
         x="35"
         y="42"
@@ -110,8 +144,12 @@ function renderD100Svg(primaryColor: string, colors: string[], value?: number | 
         font-weight="bold"
         font-family="Arial, sans-serif"
       >${str_value_1}</text>
-    ` : ''}
-  ${str_value_2 ? `
+    `
+          : ''
+  }
+  ${
+      str_value_2
+          ? `
       <text
         x="68"
         y="75"
@@ -121,11 +159,18 @@ function renderD100Svg(primaryColor: string, colors: string[], value?: number | 
         font-weight="bold"
         font-family="Arial, sans-serif"
       >${str_value_2}</text>
-    ` : ''}
+    `
+          : ''
+  }
   </svg>`.trim();
 }
 
-function renderDFSvg(primaryColor: string, _colors: string[], value?: number | string, secondaryColor?: string): string {
+function renderDFSvg(
+    primaryColor: string,
+    _colors: string[],
+    value?: number | string,
+    secondaryColor?: string,
+): string {
     let value_str: string;
     let is_symbol = false;
     switch (value) {
@@ -147,7 +192,9 @@ function renderDFSvg(primaryColor: string, _colors: string[], value?: number | s
     return `
   <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect x="22" y="21" width="57" height="57" fill="${primaryColor}"/>
-  ${value_str ? `
+  ${
+      value_str
+          ? `
       <text
         x="50"
         y="${value_str === '+' ? '62' : '60'}"
@@ -157,21 +204,19 @@ function renderDFSvg(primaryColor: string, _colors: string[], value?: number | s
         font-weight="bold"
         font-family="Arial, sans-serif"
       >${value_str}</text>
-    ` : ''}
+    `
+          : ''
+  }
   </svg>`.trim();
 }
 
 const diceShapes: Record<string, DiceShape> = {
     d4: {
-        paths: [
-            { d: 'M 52.2402 13 L 91.2114 80.5 H 13.2691 Z' },
-        ],
+        paths: [{ d: 'M 52.2402 13 L 91.2114 80.5 H 13.2691 Z' }],
         textY: 65,
     },
     d6: {
-        paths: [
-            { d: 'M 22 21 h 57 v 57 h -57 Z' },
-        ],
+        paths: [{ d: 'M 22 21 h 57 v 57 h -57 Z' }],
     },
     d8: {
         paths: [
@@ -226,7 +271,14 @@ const diceShapes: Record<string, DiceShape> = {
     },
 };
 
-type RenderFn = (primaryColor: string, colors: string[], value?: number | string, secondaryColor?: string) => string;
+type RenderFn = (
+    primaryColor: string,
+    colors: string[],
+    value?: number | string,
+    secondaryColor?: string,
+    d100Tens?: string,
+    d100Ones?: string,
+) => string;
 
 function useRenderer(diceType: string): RenderFn {
     return useMemo(() => {
@@ -240,7 +292,8 @@ function useRenderer(diceType: string): RenderFn {
             default: {
                 const shape = diceShapes[diceType];
                 if (!shape) throw new Error(`Unknown dice type: ${diceType}`);
-                return (pc: string, _colors: string[], value?: number | string, sc?: string) => renderStandardSvg(pc, _colors, shape, value, sc);
+                return (pc: string, _colors: string[], value?: number | string, sc?: string) =>
+                    renderStandardSvg(pc, _colors, shape, value, sc);
             }
         }
     }, [diceType]);
@@ -250,15 +303,35 @@ const customDiceShades: Record<string, number[]> = {
     d100: [0.171, 0.46],
 };
 
-function DiceSvg({ primaryColor, secondaryColor, value, mode = 'image', style, className, onClick, diceType }: DiceSvgProps & { diceType: string }) {
+function DiceSvg({
+    primaryColor,
+    secondaryColor,
+    value,
+    mode = 'image',
+    style,
+    className,
+    onClick,
+    diceType,
+    d100Tens,
+    d100Ones,
+}: DiceSvgProps & { diceType: string }) {
     const shape = diceShapes[diceType];
     const shades = shape?.shades ?? customDiceShades[diceType];
     const colors = useDiceColors(primaryColor, shades ?? []);
     const renderFn = useRenderer(diceType);
 
-    const svgContent = renderFn(primaryColor, colors, value, secondaryColor);
+    const svgContent = renderFn(primaryColor, colors, value, secondaryColor, d100Tens, d100Ones);
 
-    return <SvgImage svgString={svgContent} mode={mode} style={style} className={className} onClick={onClick} alt={`Dice${diceType.toUpperCase()}`} />;
+    return (
+        <SvgImage
+            svgString={svgContent}
+            mode={mode}
+            style={style}
+            className={className}
+            onClick={onClick}
+            alt={`Dice${diceType.toUpperCase()}`}
+        />
+    );
 }
 
 export const DiceD2 = (props: DiceSvgProps) => <DiceSvg {...props} diceType="d2" />;

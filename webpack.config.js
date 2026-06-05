@@ -33,13 +33,15 @@ module.exports = {
     },
     optimization: {
         minimize: true,
-        minimizer: [new TerserPlugin({
-            extractComments: false,
-            terserOptions: {
-                format: {
-                    comments: false,
+        minimizer: [
+            new TerserPlugin({
+                extractComments: false,
+                terserOptions: {
+                    format: {
+                        comments: false,
+                    },
                 },
-            },
-        })],
+            }),
+        ],
     },
 };

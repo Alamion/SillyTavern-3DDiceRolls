@@ -7,14 +7,20 @@ import { dndDice, type DiceConfig } from '../dice-config';
 const DndTab = memo(function DndTab() {
     const { settings, notationInput, setNotationInput } = useDiceRoller();
 
-    const onAdd = useCallback((config: DiceConfig) => {
-        setNotationInput(handleDiceNotation(notationInput, config.notation, true));
-    }, [notationInput, setNotationInput]);
+    const onAdd = useCallback(
+        (config: DiceConfig) => {
+            setNotationInput(handleDiceNotation(notationInput, config.notation, true));
+        },
+        [notationInput, setNotationInput],
+    );
 
-    const onRemove = useCallback((config: DiceConfig, e: React.MouseEvent) => {
-        e.preventDefault();
-        setNotationInput(handleDiceNotation(notationInput, config.notation, false));
-    }, [notationInput, setNotationInput]);
+    const onRemove = useCallback(
+        (config: DiceConfig, e: React.MouseEvent) => {
+            e.preventDefault();
+            setNotationInput(handleDiceNotation(notationInput, config.notation, false));
+        },
+        [notationInput, setNotationInput],
+    );
 
     const handleAdv = useCallback(() => {
         setNotationInput(applyAdvantage(notationInput));
@@ -27,7 +33,7 @@ const DndTab = memo(function DndTab() {
     return (
         <div className="ddr-dice-tab-body">
             <div className="ddr-dice-pool-dice">
-                {dndDice.map(config => (
+                {dndDice.map((config) => (
                     <DiceButton
                         key={config.notation}
                         config={config}

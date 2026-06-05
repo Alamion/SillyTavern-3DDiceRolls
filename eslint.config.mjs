@@ -5,6 +5,7 @@ import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
+import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default defineConfig([
     { files: ['**/*.{js,mjs,cjs,ts,tsx}'] },
@@ -31,7 +32,16 @@ export default defineConfig([
         },
     },
     {
-        ignores: ['**/dist/**', '**/node_modules/**', '**/tmp/**', '**/context/**', 'webpack.config.js', 'postcss.config.js', 'check-version.js', '**/.husky/**'],
+        ignores: [
+            '**/dist/**',
+            '**/node_modules/**',
+            '**/tmp/**',
+            '**/context/**',
+            'webpack.config.js',
+            'postcss.config.js',
+            'check-version.js',
+            '**/.husky/**',
+        ],
     },
     {
         rules: {
@@ -40,9 +50,9 @@ export default defineConfig([
             'no-control-regex': 'off',
             'no-constant-condition': ['error', { checkLoops: false }],
             'require-yield': 'off',
-            'quotes': ['error', 'single'],
-            'semi': ['error', 'always'],
-            'indent': ['error', 4, { SwitchCase: 1, FunctionDeclaration: { parameters: 'first' } }],
+            quotes: ['error', 'single'],
+            semi: ['error', 'always'],
+            indent: ['error', 4, { SwitchCase: 1, FunctionDeclaration: { parameters: 'first' } }],
             'comma-dangle': ['error', 'always-multiline'],
             'eol-last': ['error', 'always'],
             'no-trailing-spaces': 'error',
@@ -53,5 +63,8 @@ export default defineConfig([
             'no-unneeded-ternary': 'error',
             'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true }],
         },
+    },
+    {
+        rules: eslintConfigPrettier.rules,
     },
 ]);

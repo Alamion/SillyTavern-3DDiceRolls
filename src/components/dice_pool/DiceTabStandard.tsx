@@ -7,19 +7,25 @@ import { standardDice, type DiceConfig } from '../dice-config';
 const StandardTab = memo(function StandardTab() {
     const { settings, notationInput, setNotationInput } = useDiceRoller();
 
-    const onAdd = useCallback((config: DiceConfig) => {
-        setNotationInput(handleDiceNotation(notationInput, config.notation, true));
-    }, [notationInput, setNotationInput]);
+    const onAdd = useCallback(
+        (config: DiceConfig) => {
+            setNotationInput(handleDiceNotation(notationInput, config.notation, true));
+        },
+        [notationInput, setNotationInput],
+    );
 
-    const onRemove = useCallback((config: DiceConfig, e: React.MouseEvent) => {
-        e.preventDefault();
-        setNotationInput(handleDiceNotation(notationInput, config.notation, false));
-    }, [notationInput, setNotationInput]);
+    const onRemove = useCallback(
+        (config: DiceConfig, e: React.MouseEvent) => {
+            e.preventDefault();
+            setNotationInput(handleDiceNotation(notationInput, config.notation, false));
+        },
+        [notationInput, setNotationInput],
+    );
 
     return (
         <div className="ddr-dice-tab-body">
             <div className="ddr-dice-pool-dice">
-                {standardDice.map(config => (
+                {standardDice.map((config) => (
                     <DiceButton
                         key={config.notation}
                         config={config}

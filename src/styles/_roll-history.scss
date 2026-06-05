@@ -107,8 +107,8 @@ $hovered-text: var(--SmartThemeEmColor);
     }
 }
 button.ddr-roll-history-item {
-  cursor: pointer;
-  border: none;
+    cursor: pointer;
+    border: none;
 }
 
 /* ─── Entry row: star | body | reroll ─── */
@@ -166,7 +166,7 @@ button.ddr-roll-history-item {
 }
 
 button.ddr-roll-history-body {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 .ddr-roll-history-notation {

@@ -8,7 +8,8 @@ import {
     ShadowMaterial,
     Vector3,
     WebGLRenderer,
-    PCFSoftShadowMap, CameraHelper,
+    PCFSoftShadowMap,
+    CameraHelper,
 } from 'three';
 
 export class SceneManager {
@@ -71,18 +72,12 @@ export class SceneManager {
         this.display.scale =
             Math.sqrt(
                 this.display.containerWidth * this.display.containerWidth +
-                this.display.containerHeight * this.display.containerHeight,
+                    this.display.containerHeight * this.display.containerHeight,
             ) / 13;
 
-        this.renderer.setSize(
-            this.display.currentWidth * 2,
-            this.display.currentHeight * 2,
-        );
+        this.renderer.setSize(this.display.currentWidth * 2, this.display.currentHeight * 2);
 
-        this.cameraHeight.max =
-            this.display.currentHeight /
-            this.display.aspect /
-            Math.tan((10 * Math.PI) / 180);
+        this.cameraHeight.max = this.display.currentHeight / this.display.aspect / Math.tan((10 * Math.PI) / 180);
 
         this.cameraHeight.medium = this.cameraHeight.max / 1.5;
         this.cameraHeight.far = this.cameraHeight.max;
@@ -117,16 +112,13 @@ export class SceneManager {
     }
 
     initLighting(): void {
-        const maxwidth = Math.max(
-            this.display.containerWidth,
-            this.display.containerHeight,
-        );
+        const maxwidth = Math.max(this.display.containerWidth, this.display.containerHeight);
 
         if (this.ambientLight) this.scene.remove(this.ambientLight);
         if (this.directionalLight) this.scene.remove(this.directionalLight);
 
         this.directionalLight = new DirectionalLight(0xffffff, 0.8);
-        this.directionalLight.position.set(-maxwidth / 2, maxwidth / 2, maxwidth );
+        this.directionalLight.position.set(-maxwidth / 2, maxwidth / 2, maxwidth);
         this.directionalLight.castShadow = this.shadows;
         this.directionalLight.shadow.camera.near = maxwidth / 10;
         this.directionalLight.shadow.camera.far = maxwidth * 5;
@@ -153,12 +145,7 @@ export class SceneManager {
         const shadowplane = new ShadowMaterial();
         shadowplane.opacity = 0.3;
         this.desk = new Mesh(
-            new PlaneGeometry(
-                this.display.containerWidth * 6,
-                this.display.containerHeight * 6,
-                1,
-                1,
-            ),
+            new PlaneGeometry(this.display.containerWidth * 6, this.display.containerHeight * 6, 1, 1),
             shadowplane,
         );
         this.desk.receiveShadow = this.shadows;

@@ -18,10 +18,13 @@ export interface ChatMessage {
 export interface FunctionToolSchema {
     $schema: string;
     type: string;
-    properties: Record<string, {
-        type: string;
-        description: string;
-    }>;
+    properties: Record<
+        string,
+        {
+            type: string;
+            description: string;
+        }
+    >;
     required: string[];
 }
 
@@ -34,9 +37,57 @@ export interface FunctionTool {
     formatMessage: () => string;
 }
 
+export interface MacroRegistrationOptions {
+    description?: string;
+    category?: string;
+    returns?: string;
+    returnType?: string;
+    exampleUsage?: string[];
+    unnamedArgs?: { name: string; description: string; sampleValue?: string; type?: string }[];
+    handler: (ctx: {
+        unnamedArgs: string[];
+        args?: string[];
+        env?: unknown;
+        resolve?: (text: string) => string;
+    }) => string;
+}
+
+export interface MacrosAPI {
+    register: (name: string, options: MacroRegistrationOptions) => void;
+    registerAlias: (name: string, alias: string, options?: { visible?: boolean }) => void;
+    registry: {
+        unregisterMacro: (name: string) => void;
+    };
+    category: {
+        /** Basic utilities and text manipulation (newline, noop, trim, reverse, comment) */
+        UTILITY: 'utility';
+        /** Randomization and dice rolling (random, pick, roll) */
+        RANDOM: 'random';
+        /** Participant names and name lists (user, char, group, notChar) */
+        NAMES: 'names';
+        /** Character card fields and persona (description, personality, scenario, mesExamples, persona) */
+        CHARACTER: 'character';
+        /** Chat history, messages, and swipes */
+        CHAT: 'chat';
+        /** Date, time, and duration macros */
+        TIME: 'time';
+        /** Local and global variable operations */
+        VARIABLE: 'variable';
+        /** Prompt templates for text completion (instruct sequences, system prompts, author's notes, context templates) */
+        PROMPTS: 'prompts';
+        /** Runtime application state (model, API, lastGenerationType, isMobile) */
+        STATE: 'state';
+        /** Macros that don't fit in any of the other categories, but don't really need/deserve their own */
+        MISC: 'misc';
+        /** Macros that are registered but not assigned to a category (any macro should have a category, so let the extension author know...) */
+        UNCATEGORIZED: 'uncategorized';
+    };
+}
+
 export interface SillyTavernContext {
-    name1: string;  // user name, also encountered as {{user}}
-    name2: string;  // character name, also encountered as {{char}}
+    name1: string; // user name, also encountered as {{user}}
+    name2: string; // character name, also encountered as {{char}}
+    macros: MacrosAPI;
     characters: unknown[];
     activeCharacter: unknown;
     extensionSettings: Record<string, Record<string, unknown>>;

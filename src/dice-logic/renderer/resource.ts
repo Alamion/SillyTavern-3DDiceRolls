@@ -1,12 +1,9 @@
 import { BufferGeometry, Material, Mesh, Object3D, Texture, type Object3DEventMap } from 'three';
 
 type Disposable = { dispose: () => void };
-type Trackable =
-    | Mesh<BufferGeometry, Material | Material[]>
-    | Material
-    | Object3D<Object3DEventMap>;
+type Trackable = Mesh<BufferGeometry, Material | Material[]> | Material | Object3D<Object3DEventMap>;
 
-type TrackedResource = Trackable | Trackable[] | Disposable;
+type TrackedResource = Trackable | Disposable;
 
 export class ResourceTracker {
     resources: Map<TrackedResource, TrackedResource[]> = new Map();
@@ -18,18 +15,18 @@ export class ResourceTracker {
     }
 
     #track(resource: TrackedResource, parent?: TrackedResource): void {
-        if (Array.isArray(resource)) {
-            resource.forEach((r) => {
-                if (parent !== undefined) {
-                    const children = this.resources.get(parent) ?? [];
-                    children.push(r);
-                }
-                this.#track(r, parent);
-            });
-        } else {
-            const key = parent ?? resource;
-            const children = this.resources.get(key) ?? [];
-            this.resources.set(key, children);
+        const key = parent ?? resource;
+        const children = this.resources.get(key) ?? [];
+        this.resources.set(key, children);
+    }
+
+    #trackArray(resources: TrackedResource[], parent?: TrackedResource): void {
+        for (const r of resources) {
+            if (parent !== undefined) {
+                const children = this.resources.get(parent) ?? [];
+                children.push(r);
+            }
+            this.#track(r, parent);
         }
     }
 
@@ -48,13 +45,17 @@ export class ResourceTracker {
         }
 
         if (resource && typeof resource === 'object' && 'material' in resource) {
-            const r = resource as unknown as { material: unknown };
-            this.#track(r.material as TrackedResource, resource);
+            const r = resource as unknown as { material: Material | Material[] };
+            if (Array.isArray(r.material)) {
+                this.#trackArray(r.material as TrackedResource[], resource);
+            } else {
+                this.#track(r.material as TrackedResource, resource);
+            }
         }
 
         if (resource && typeof resource === 'object' && 'children' in resource) {
-            const r = resource as unknown as { children: unknown };
-            this.#track(r.children as TrackedResource, resource);
+            const r = resource as unknown as { children: unknown[] };
+            this.#trackArray(r.children as TrackedResource[], resource);
         }
 
         if (resource instanceof Material) {

@@ -1,7 +1,5 @@
 import type { FC } from 'react';
-import {
-    DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20, DiceD100, DiceD2, DiceDF,
-} from './2d_dices';
+import { DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20, DiceD100, DiceD2, DiceDF } from './2d_dices';
 
 export interface DiceConfig {
     notation: string;

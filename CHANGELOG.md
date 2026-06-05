@@ -1,28 +1,74 @@
 # Changelog
 
+## 1.4.0
+
+### Features
+
+- **Forced / Predetermined Rolls (`@` notation)** — `2d20@20,1` forces specific outcomes. Works with modifiers (`4d6@3,3,3,3kh3`). In 3D mode, warns and proceeds with normal physics. `validateNotation('')` returns `false` for empty/whitespace strings. (TODO 1.4)
+- **Botch Modifiers (`csb` / `cfb`)** — `csb` adds +1 to total per critical success, `cfb` subtracts -1 per critical failure. No target threshold needed: `3d6csb` works standalone. (TODO 1.7)
+- **Sound Effects System** — Cannon-es collision events play surface/die audio via `SoundManager`. Dynamic runtime updates via `updateSoundConfig()`. Settings: `enableSound` toggle + `soundVolume` slider (0–100). (TODO 2.1)
+- **Reroll Specific Dice (3D)** — Raycaster click-detection on 3D dice. Click a die to lock others and rethrow it. Works during `timeToReact` window and normal physics. Visual feedback: cursor → pointer on hover, emissive highlight. (TODO 2.2)
+- **Time-to-React & Loading Controls** — New settings: `timeToReact` (bool) + `timeToReactSeconds` (slider 1–60). During rolling shows `ddr-loading` spinner with accept (✓) / cancel (✗) buttons. (TODO 4.0)
+- **Custom Dice Macros (`{{ddroll}}`)** — `{{ddroll::2d6+3}}` via SillyTavern `macros.register()`. Uses `ddroll` name to avoid overwriting core `{{roll::1d20}}`. Outputs compact formatted result. (TODO 6.0)
+
+### Bug Fixes
+
+- **`formatRollValues` `'+'` path now replaces all `+-`, not just the first** — Changed `replace('+-', '-')` to `replace(/\+-/g, '-')` so expressions with multiple negative terms (e.g. `1+2+-3+-4+5`) format correctly. (TOFIX #1 — CRITICAL)
+- **Null geometry from `prepareDiceGeometries` no longer silently skipped** — `groupSizes[g]` now tracks actual successfully-created geometries rather than requested count. If no geometries could be built, orchestrator falls back to 2D evaluation instead of passing an empty array. (TOFIX #2 — CRITICAL)
+- **Window resize during active roll no longer freezes dice** — `handleResize` now checks for active roll sessions before destroying the physics world. When dice are in play, it only updates camera dimensions and barriers in-place instead of recreating `PhysicsWorld` and `SceneManager`. (TOFIX #3 — CRITICAL)
+- **Sound file URL resolution and deployment improved** — `getExtensionSoundsBaseUrl()` now also matches script src containing `/dist/index.js`. Build step copies `sounds/` → `dist/sounds/` via `require('fs').cpSync` so sounds are always bundled alongside the extension bundle. (TOFIX #4 — CRITICAL)
+- **`handlePointerMove` no longer interacts through `.ddr-loading-bar`** — Added guard matching `handlePointerDown` to filter out loading-bar elements, preventing hover cursor changes through the loading overlay. (TOFIX #10 — HIGH)
+- **`prepareDiceGeometries` result checked for empty/null before use** — Added explicit guard with 2D fallback when `geometries.length === 0`, completing the safety chain. (TOFIX #5 — RE-OPEN)
+- **SoundManager.init() failure now logged** — `init()` catch logs warning. (TOFIX #15 — MEDIUM)
+- **Sound loading errors logged per-clip** — Individual clip load failures silently skipped but `init()` warns if all sounds fail. (TOFIX #16 — MEDIUM)
+
+### Refactors
+
+- **3D roll loop extracted into named helpers** — Inline ~182-line per-group processing loop in `roll-orchestrator.ts` split into `convertFlatToGroupRolls`, `processRethrowLoop` (handles both reroll and unique phases), and `processExplosionLoop`. Main loop body now reads as a sequence of four clear calls. (TOFIX #6 — HIGH)
+- **RollHistory tab renders DRY'd** — Three structurally identical render functions (`renderChatTab`, `renderFavoritesTab`, `renderRecentTab`) replaced with a single `renderList` helper parameterized by data source. (TOFIX #7 — HIGH)
+- **`saveTimeout` moved from module-level to component ref** — Moved `saveTimeout` variable into `DiceRollerProvider` via `useRef`, eliminating shared state between potential multiple provider instances. (TOFIX #8 — HIGH)
+- **d100 tens/ones splitting moved out of DiceSvg** — `splitD100Value()` utility added to `dice-logic/notation-utils.ts`. DiceSvg now accepts optional `d100Tens`/`d100Ones` props, keeping display logic separate from dice-arithmetic. (TOFIX #9 — HIGH)
+- **Configurable collision velocity threshold** — `SoundManagerConfig.speedThreshold` field replaces hardcoded `SPEED_THRESHOLD = 250`. Default stays 250, adjustable per-instance. (TOFIX #19)
+
+### Infrastructure
+
+- **Unused `physCount` variable removed** from `roll-orchestrator.ts`.
+- **`as any` cast replaced with `as DiceGroupNode`** in `tests/evaluator/basic-rolls.test.ts`.
+- **`DiceGeometryData` import added** to `roll-orchestrator.ts` for typed handle parameter in explosion helper.
+- **`getContext()` cached at module level** — `cachedContext` variable avoids calling `SillyTavern.getContext()` on every persistence operation. (TOFIX #11 — MEDIUM)
+- **`TrackedResource` types narrowed** — Removed union-typed overloads; parent/child tracking now type-safe. (TOFIX #12 — MEDIUM)
+- **`preGeneratedValues`/`multiplier` scope clarified** — Already clean after 1.4.0 loop extraction refactor, marked resolved. (TOFIX #18 — LOW)
+- **`SPEED_THRESHOLD` removed as dead constant** — Replaced by configurable `speedThreshold` on `SoundManagerConfig`. (TOFIX #19 — LOW)
+
 ## 1.3.3
 
 ### Features
+
 - **Fate / Fudge Dice (dF) — Full 3D Support** — `dF` now renders correctly in 3D with proper Fate symbols (`-`, `0`, `+`) on each cube face instead of standard 1-6 labels. Physics simulation returns correct fudge values (`-1`, `0`, `+1`) instead of 1-6. Factory updated to override D6 labels/values when `fudge` flag is set, skipping the `+1` value shift.
 
 ### Improvements
+
 - **`faceLabel` field added to `DiceRoll`** — Optional string field on every die result, populated with `'-'`, `' '`, or `'+'` for fudge dice in both 2D and 3D paths. Ready for display formatters to show symbolic output.
 
 ### Bug Fixes
+
 - **`dF` no longer rolls as D6 in 3D** — Root cause: `factory.ts` ignored the `fudge` flag on `DiceGroup`, created plain `D6DiceGeometry` with standard 1-6 labels and values. Now detects `group.fudge`, overrides face labels and values, and preserves `-1`/`0`/`+1` through the pipeline.
 
 ### Infrastructure
+
 - **`DiceGeometryClass` type widened** — Exposes `labels: string[]` and `values: number[]` on the returned instance, enabling fudge label overrides in the factory layer.
 
 ## 1.3.2
 
 ### Features
+
 - **UI Overhaul: Toolbar integration** — Replaced floating dice button with a SillyTavern-native `drawer-icon` toggle injected into `.top-settings-holder`. Uses `fa-solid fa-dice-d20 fa-fw` Font Awesome icon with `closedIcon`/`openIcon` states and `interactable` class for proper toolbar styling and accessibility.
 - **Combined dice pool + roll history panel** — Single toggle panel contains both the dice pool builder (8-die grid) and roll history list. Toggle button stays visible as a persistent open/close control; removed close buttons from both windows.
 - **RollHistory simplified** — Removed standalone collapsed/expanded toggle and floating container. Now renders inline inside the DicePool panel without its own header/close chrome.
 - **Invalid notation reference link** — When notation is invalid, star button replaced with `fa-regular fa-circle-question` icon linking to dice notation docs at `https://dice-roller.github.io/documentation/guide/notation/modifiers.html`.
 
 ### Bug Fixes
+
 - **Removed background highlight on hover** — Dice pool toggle no longer highlights on hover, matching SillyTavern drawer-icon behavior.
 - **Star/favorite icons use Font Awesome** — Replaced text `★`/`☆` characters with `fa-solid fa-star`/`fa-regular fa-star` in DicePool.tsx and RollHistory.tsx, matching app convention (TOFIX #15).
 - **`isFavorite` reference stabilization** — `useCallback` deps changed from `[favorites]` to `favoritesRef` to prevent cascading re-renders (TOFIX #16).
@@ -34,6 +80,7 @@
 - **`unregisterFunctionTool` moved inside capability guard** — No longer called before `isToolCallingSupported` check; only unregisters when tool calling is supported (TOFIX #30).
 
 ### Infrastructure
+
 - **Removed standalone RollHistory React root** — `body-injection.tsx` no longer creates a separate `#ddr-roll-history-container`. Roll history data is passed down as props to DicePool, which renders RollHistory inline.
 - **React Context/Provider pattern** — Introduced `DiceRollerProvider` (`DiceRollerContext.tsx`) as the single source of truth for settings, roll history, favorites, and notation input state. Components use `useDiceRoller()` hook instead of prop drilling.
 - **Per-chat history persistence** — `DiceRollerProvider` manages `HistoryEntry[]` loaded/saved to `chatMetadata['3d_dice_rolls']` automatically via debounced `saveMetadata()`.
@@ -50,11 +97,12 @@
 - **`useDiceColors` dependency uses `JSON.stringify`** — Replaced `eslint-disable` with `JSON.stringify(shades)` for proper dependency tracking (TOFIX #28).
 
 ### Features
+
 - **History Overhaul (3.5)** — Redesigned `RollHistory.tsx` with 3 tabs:
-  - **Chat** — per-chat entries, latest auto-expanded with `--SmartThemeQuoteColor`, click entry to copy notation to input and toggle details, reroll button (↻) to roll immediately, star icon to toggle favorite.
-  - **Favorites** — global `FavoriteNotation[]` list, click to set notation, reroll button, unstar to remove.
-  - **Recent** — last 10 unique notations globally, click to set notation, reroll button.
-  - Only the "All" tab shows expanded details; Favorites and Recent tabs show notation only.
+    - **Chat** — per-chat entries, latest auto-expanded with `--SmartThemeQuoteColor`, click entry to copy notation to input and toggle details, reroll button (↻) to roll immediately, star icon to toggle favorite.
+    - **Favorites** — global `FavoriteNotation[]` list, click to set notation, reroll button, unstar to remove.
+    - **Recent** — last 10 unique notations globally, click to set notation, reroll button.
+    - Only the "All" tab shows expanded details; Favorites and Recent tabs show notation only.
 - **Favorites System (3.4)** — Star button in notation editor saves current notation as global favorite. Star icon on each history entry toggles favorite. Favorites persist across chats via `extensionSettings`.
 - **DicePool reads settings from context** — `getSettings()` no longer called in render body. Uses `useDiceRoller().settings`, fixing React reactivity and the TOFIX 2.4 issue.
 - **Notation input shared via context** — `DicePool` editor and `RollHistory` click-to-set both use the same `notationInput` state from `DiceRollerProvider`.
@@ -62,15 +110,18 @@
 ## 1.3.1
 
 ### Features
+
 - **Loading indicator for 3D simulation** — Pure-CSS spinning ring (`.ddr-loading`) replaces grey overlay + "Rolling..." text. Positioned top-left in renderer container. Color matches `primaryDiceColor` setting via `--ddr-loader-color` custom property. Styles in `src/styles/_loading-indicator.scss`.
 - **Shared `buildGroupKey` helper** — Extracted duplicated group key construction from `dice-evaluator.ts` and `roll-orchestrator.ts` into `dice-logic/utils.ts`.
 
 ### Infrastructure
+
 - **Edge-case tests (142 total, +26)** — Added tests for: empty pre-generated values map, max explosions capped (`1d1!` at `MAX_EXPLOSIONS`), 50-level nested parentheses, unicode rejection, negative expressions, and additional unique/reroll/explosion coverage.
 
 ## 1.3.0
 
 ### Features
+
 - **Lexer-Based Parser** — Replaced regex-based parser with moo-based lexer (`dice-lexer.ts`) + recursive descent parser (`dice-parser.ts`). Supports order-of-operations with parentheses `(2d6+3)*2`, arithmetic operators (`*`, `/`, `%`, `^`), and chained modifiers (`4d6r1kh3`).
 - **Custom Face Values & Range Dice** — Supports `1d[1,3,5,7,9]` and range expansion (`3-5` → `3,4,5`). Custom-faced dice fall back to 2D when no 3D geometry matches.
 - **Conditional Modifiers** — All six operators (`>`, `>=`, `<`, `<=`, `=`, `!=`). Conditions compose with `kh`/`dl` modifiers. `sum` becomes success-counting mode when condition is present.
@@ -83,6 +134,7 @@
 - **Fixed Modifier Evaluation Order (1–11)** — All modifiers now execute in a canonical order regardless of their position in notation. Min/Max always apply (including pre-generated values). Explode/Reroll/Unique only for non-pre-gen.
 
 ### Bug Fixes
+
 - **Duplicate group key collision** — `2d6+2d6` no longer gives both groups identical values. Added unique group index counters.
 - **ResourceTracker memory leak** — `tracker.dispose()` now called when dice leave the scene via `RollSession`.
 - **D100 logical/physical desync** — Combined D10 value pairs into D100 logical values, expanded reroll indices from logical to physical, and correctly mapped explosion values back.
@@ -100,6 +152,7 @@
 - **Reroll mockRandom consumption order** — Tests now correctly model that ALL dice are initialized first, then rerolls/modifiers run, consuming mock values in that order.
 
 ### Infrastructure
+
 - **Test Suite (116 tests)** — Added full Vitest test suite: parser (55), evaluator basic-rolls (11), evaluator combined (8), evaluator explosion (8), evaluator modifiers (20), evaluator reroll (7), integration (7).
 - **Magic numbers → constants** — `MAX_EXPLOSIONS`, `MAX_ROLL_SECONDS`, `VELOCITY_THRESHOLD`, `FRAME_RATE` extracted to `src/utils/constants.ts`.
 - **Subscriber pattern for settings** — Replaced polling with `subscribeSettings`/`notifySubscribers` in `settings.ts`.

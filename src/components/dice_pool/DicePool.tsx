@@ -56,7 +56,7 @@ export default function DicePool() {
     return (
         <>
             <div className="ddr-dice-tabs">
-                {TABS.map(tab => (
+                {TABS.map((tab) => (
                     <button
                         key={tab.id}
                         className={`ddr-dice-tab ${activeTab === tab.id ? 'ddr-dice-tab-active' : ''}`}
@@ -99,9 +99,11 @@ export default function DicePool() {
                         }}
                     />
                     {notationInput.length > 0 && (
-                        <span className={`ddr-dice-custom-status ${
-                            notationValid ? 'ddr-dice-custom-status-valid' : 'ddr-dice-custom-status-invalid'
-                        }`}>
+                        <span
+                            className={`ddr-dice-custom-status ${
+                                notationValid ? 'ddr-dice-custom-status-valid' : 'ddr-dice-custom-status-invalid'
+                            }`}
+                        >
                             {notationValid ? '✓' : '✗'}
                         </span>
                     )}

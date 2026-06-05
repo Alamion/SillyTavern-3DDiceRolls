@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { rollDices } from '../../src/dice-logic/dice-roller';
-import { parseToAST, validateNotation } from '../../src/dice-logic/dice-parser';
-import { extractRawValuesFromAST } from '../../src/dice-logic/dice-evaluator';
+import { rollDices, parseToAST, validateNotation } from '../../src/dice-logic';
+import { extractRawValuesFromAST } from '../../src/dice-logic';
 
 function mockRandom(...values: number[]): () => number {
     let i = 0;
@@ -13,9 +12,8 @@ describe('Integration - full pipeline', () => {
         const result = rollDices('2d6+3', mockRandom(0.1, 0.5));
         expect(result.notation).toBe('2d6+3');
         expect(result.total).toBe(8);
-        expect(result.formatted).toContain('2d6+3:');
-        expect(result.formatted).toContain('= 8');
-        expect(result.details).toBe('(1 + 4)');
+        expect(result.formatted).toBe('1+4+3');
+        expect(result.details).toBe('1, 4');
     });
 
     it('rollDices returns correct structure for simple roll', () => {
@@ -31,7 +29,8 @@ describe('Integration - full pipeline', () => {
     it('rollDices handles fudge dice through pipeline', () => {
         const result = rollDices('4dF', mockRandom(0.0, 0.4, 0.6, 0.9));
         expect(result.total).toBe(0);
-        expect(result.formatted).toContain('4dF');
+        expect(result.formatted).toBe('-1+0+0+1');
+        expect(result.details).toBe('-,  ,  , +');
     });
 
     it('extractRawValuesFromAST returns raw values', () => {
@@ -53,6 +52,29 @@ describe('Integration - full pipeline', () => {
     it('validateNotation returns false for invalid', () => {
         expect(validateNotation('')).toBe(false);
         expect(validateNotation('abc')).toBe(false);
+    });
+
+    it('complex expression with multiple dice types, parentheses, and fudge', () => {
+        // 7d2! - 2d20 + 3*( 3dF - 2 )
+        // mockRandom consumed in tree order:
+        //   7d2!: 7 initial rolls → all=1 (no explosion, no 2s)
+        //   2d20: 2 rolls → 10, 6
+        //   3dF: 3 rolls → -1, 0, 1
+        // Total = 7 - 16 + 3*(0 - 2) = -15
+        const result = rollDices(
+            '7d2! - 2d20kh + 3*( 3dF - 2 )',
+            mockRandom(0.0, 0.7, 0.2, 0.3, 0.4, 0.4, 0.9, 0.2, 0.2, 0.45, 0.25, 0.1, 0.5, 0.8),
+        );
+        expect(result.diceGroups).toHaveLength(3);
+        expect(result.diceGroups[0].notation).toBe('7d2!');
+        expect(result.diceGroups[1].notation).toBe('2d20kh1');
+        expect(result.diceGroups[2].notation).toBe('3dF');
+        expect(result.diceGroups[0].sum).toBe(11);
+        expect(result.diceGroups[1].sum).toBe(10);
+        expect(result.diceGroups[2].sum).toBe(0);
+        expect(result.total).toBe(-5);
+        expect(result.details).toBe('(1, 2!, 1, 1, 1, 1, 1, 2!, 1) (10, ~~6~~) (-,  , +)');
+        expect(result.formatted).toBe('(1+2+1+1+1+1+1+2+1)-(10)+3*((-1+0+1)-2)');
     });
 
     it('complex chained expression through full pipeline', () => {

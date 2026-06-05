@@ -87,9 +87,7 @@ function createSettingsUI(): void {
         rootContainer.appendChild(rootElement);
 
         const root = ReactDOM.createRoot(rootElement);
-        root.render(
-            <SettingsPanel />,
-        );
+        root.render(<SettingsPanel />);
     } catch (err) {
         error('Failed to create settings UI', 'Settings UI', [err]);
     }
@@ -122,7 +120,9 @@ function injectResult(result: import('../dice-logic').RollResult): void {
     const userInput = document.querySelector<HTMLTextAreaElement>('#send_textarea');
     if (!userInput) return;
     const currentValue = userInput.value;
-    userInput.value = currentValue ? `${currentValue}\n${result.formatted}` : result.formatted;
+    userInput.value = currentValue
+        ? `${currentValue}\n${formatResultForDisplay(result, 'full')}`
+        : formatResultForDisplay(result, 'full');
     userInput.dispatchEvent(new Event('input', { bubbles: true }));
 }
 

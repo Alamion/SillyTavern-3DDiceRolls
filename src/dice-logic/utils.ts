@@ -1,6 +1,9 @@
 import type { DiceGroupNode, DiceModifiers, DiceRoll } from './types';
 
-export function buildGroupKey(node: DiceGroupNode | { count: number; sides: number; fudge: boolean; customFaces?: number[] }, index: number): string {
+export function buildGroupKey(
+    node: DiceGroupNode | { count: number; sides: number; fudge: boolean; customFaces?: number[] },
+    index: number,
+): string {
     return `${node.count}d${node.sides}_${node.fudge ? 'f' : ''}_${index}_${node.customFaces ? node.customFaces.join(',') : ''}`;
 }
 
@@ -51,19 +54,21 @@ export function formatModifiers(modifiers: DiceModifiers): string {
         parts.push(`f${tf.operator}${tf.value}`);
     }
     if (modifiers.criticalSuccess) {
+        const botch = modifiers.criticalSuccessBotch ? 'b' : '';
         if (modifiers.criticalSuccess === true) {
-            parts.push('cs');
+            parts.push(`cs${botch}`);
         } else {
             const cs = modifiers.criticalSuccess;
-            parts.push(`cs${cs.operator}${cs.value}`);
+            parts.push(`cs${botch}${cs.operator}${cs.value}`);
         }
     }
     if (modifiers.criticalFailure) {
+        const botch = modifiers.criticalFailureBotch ? 'b' : '';
         if (modifiers.criticalFailure === true) {
-            parts.push('cf');
+            parts.push(`cf${botch}`);
         } else {
             const cf = modifiers.criticalFailure;
-            parts.push(`cf${cf.operator}${cf.value}`);
+            parts.push(`cf${botch}${cf.operator}${cf.value}`);
         }
     }
     if (modifiers.sort) parts.push(modifiers.sort === 'asc' ? 's' : 'sd');
@@ -73,55 +78,65 @@ export function formatModifiers(modifiers: DiceModifiers): string {
 export function applyKeepDrop(rolls: DiceRoll[], modifiers: DiceModifiers): DiceRoll[] {
     if (modifiers.keepHighest) {
         const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => b.roll.value - a.roll.value);
-        const keepIndices = new Set(sorted.slice(0, modifiers.keepHighest).map(s => s.idx));
+        const keepIndices = new Set(sorted.slice(0, modifiers.keepHighest).map((s) => s.idx));
         return rolls.map((r, idx) => ({ ...r, dropped: !keepIndices.has(idx) }));
     }
 
     if (modifiers.keepLowest) {
         const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => a.roll.value - b.roll.value);
-        const keepIndices = new Set(sorted.slice(0, modifiers.keepLowest).map(s => s.idx));
+        const keepIndices = new Set(sorted.slice(0, modifiers.keepLowest).map((s) => s.idx));
         return rolls.map((r, idx) => ({ ...r, dropped: !keepIndices.has(idx) }));
     }
 
     if (modifiers.dropHighest) {
         const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => b.roll.value - a.roll.value);
-        const dropIndices = new Set(sorted.slice(0, modifiers.dropHighest).map(s => s.idx));
+        const dropIndices = new Set(sorted.slice(0, modifiers.dropHighest).map((s) => s.idx));
         return rolls.map((r, idx) => ({ ...r, dropped: dropIndices.has(idx) }));
     }
 
     if (modifiers.dropLowest) {
         const sorted = [...rolls].map((r, idx) => ({ roll: r, idx })).sort((a, b) => a.roll.value - b.roll.value);
-        const dropIndices = new Set(sorted.slice(0, modifiers.dropLowest).map(s => s.idx));
+        const dropIndices = new Set(sorted.slice(0, modifiers.dropLowest).map((s) => s.idx));
         return rolls.map((r, idx) => ({ ...r, dropped: dropIndices.has(idx) }));
     }
 
     return rolls;
 }
 
-export function formatRollValues(rolls: DiceRoll[]): string {
-    return rolls.map(r => {
-        let s = String(r.value);
-        if (r.minRaised) {
-            s = `${s}^`;
-        }
-        if (r.maxCapped) {
-            s = `${s}v`;
-        }
-        if (r.dropped) {
-            s = `~~${s}~~`;
-        } else if (r.compounded) {
-            s = `${s}!!`;
-        } else if (r.exploded) {
-            s = r.penetrating ? `${s}!p` : `${s}!`;
-        } else if (r.criticalSuccess) {
-            s = `${s}**`;
-        } else if (r.criticalFailure) {
-            s = `${s}__`;
-        } else if (r.targetSuccess) {
-            s = `${s}*`;
-        } else if (r.targetFailure) {
-            s = `${s}_`;
-        }
-        return s;
-    }).join(' + ');
+export function formatRollValues(rolls: DiceRoll[], divider: ',' | '+'): string {
+    if (divider === ',') {
+        return rolls
+            .map((r) => {
+                let s = r.faceLabel ?? String(r.value);
+                if (r.minRaised) {
+                    s = `${s}^`;
+                }
+                if (r.maxCapped) {
+                    s = `${s}v`;
+                }
+                if (r.dropped) {
+                    s = `~~${s}~~`;
+                } else if (r.compounded) {
+                    s = `${s}!!`;
+                } else if (r.exploded) {
+                    s = r.penetrating ? `${s}!p` : `${s}!`;
+                } else if (r.criticalSuccess) {
+                    s = `${s}**`;
+                } else if (r.criticalFailure) {
+                    s = `${s}__`;
+                } else if (r.targetSuccess) {
+                    s = `${s}*`;
+                } else if (r.targetFailure) {
+                    s = `${s}_`;
+                }
+                return s;
+            })
+            .join(', ');
+    } else {
+        const new_rolls = rolls
+            .filter((r) => !r.dropped)
+            .map((r) => String(r.value))
+            .join('+');
+        return new_rolls.replace(/\+-/g, '-');
+    }
 }

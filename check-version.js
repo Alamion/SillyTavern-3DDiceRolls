@@ -2,16 +2,9 @@
 
 import { execSync } from 'child_process';
 
+const stagedFiles = execSync('git diff --cached --name-only', { encoding: 'utf-8' }).trim().split('\n').filter(Boolean);
 
-const stagedFiles = execSync('git diff --cached --name-only', { encoding: 'utf-8' })
-    .trim()
-    .split('\n')
-    .filter(Boolean);
-
-const hasCodeChanges = stagedFiles.some(file =>
-    file.endsWith('.ts') ||
-	file.endsWith('.tsx'),
-);
+const hasCodeChanges = stagedFiles.some((file) => file.endsWith('.ts') || file.endsWith('.tsx'));
 
 const manifestChanged = stagedFiles.includes('manifest.json');
 
@@ -37,8 +30,7 @@ if (manifestChanged && hasCodeChanges) {
             console.error('');
             process.exit(1);
         }
-    } catch (error) {
-    }
+    } catch (error) {}
 }
 
 console.log('\x1b[32m✓ Version check passed\x1b[0m');

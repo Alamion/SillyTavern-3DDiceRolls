@@ -14,18 +14,18 @@
 }
 
 @media screen and (max-width: 1000px) {
-  #ddr-dice-panel {
-    height: calc(100dvh - 45px);
-    min-width: 100dvw !important;
-    width: 100dvw !important;
-    max-width: 100dvw !important;
-    overflow-y: hidden;
-    border-left: 1px solid var(--SmartThemeBorderColor);
-    border-right: 1px solid var(--SmartThemeBorderColor);
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 0 0 20px 20px;
-    top: var(--topBarBlockSize) !important;
-    left: 0 !important;
-    backdrop-filter: blur(calc(var(--SmartThemeBlurStrength) * 2));
-  }
+    #ddr-dice-panel {
+        height: calc(100dvh - 45px);
+        min-width: 100dvw !important;
+        width: 100dvw !important;
+        max-width: 100dvw !important;
+        overflow-y: hidden;
+        border-left: 1px solid var(--SmartThemeBorderColor);
+        border-right: 1px solid var(--SmartThemeBorderColor);
+        border-bottom: 1px solid var(--SmartThemeBorderColor);
+        border-radius: 0 0 20px 20px;
+        top: var(--topBarBlockSize) !important;
+        left: 0 !important;
+        backdrop-filter: blur(calc(var(--SmartThemeBlurStrength) * 2));
+    }
 }

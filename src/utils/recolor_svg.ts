@@ -7,7 +7,13 @@ export function blendColors(color1: string, color2: string, ratio: number): stri
         }
         if (c.startsWith('#')) {
             const hex = c.slice(1);
-            const expand = hex.length === 3 ? hex.split('').map(x => x + x).join('') : hex;
+            const expand =
+                hex.length === 3
+                    ? hex
+                          .split('')
+                          .map((x) => x + x)
+                          .join('')
+                    : hex;
             return {
                 r: parseInt(expand.slice(0, 2), 16),
                 g: parseInt(expand.slice(2, 4), 16),
@@ -26,10 +32,10 @@ export function blendColors(color1: string, color2: string, ratio: number): stri
     const b = Math.round(c1.b * (1 - ratio) + c2.b * ratio);
     const a = c1.a * (1 - ratio) + c2.a * ratio;
 
-    if (a >= 1) return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    if (a >= 1)
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     return `rgba(${r},${g},${b},${a})`;
 }
-
 
 export function fixBrightness(hex: string, magnitude: number): string {
     hex = hex.replace(/^#/, '');
@@ -38,9 +44,14 @@ export function fixBrightness(hex: string, magnitude: number): string {
     let b = parseInt(hex.substring(4, 6), 16);
 
     // 2. Переводим RGB в HSL
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h = 0, s = 0, l = (max + min) / 2;
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b),
+        min = Math.min(r, g, b);
+    let h = 0,
+        s: number,
+        l = (max + min) / 2;
 
     if (max === min) {
         h = s = 0;
@@ -48,9 +59,15 @@ export function fixBrightness(hex: string, magnitude: number): string {
         const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
         switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
+            case r:
+                h = (g - b) / d + (g < b ? 6 : 0);
+                break;
+            case g:
+                h = (b - r) / d + 2;
+                break;
+            case b:
+                h = (r - g) / d + 4;
+                break;
         }
         h /= 6;
     }

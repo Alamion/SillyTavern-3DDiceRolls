@@ -1,6 +1,7 @@
 import { debug, error, warn } from './logging';
 import { getContext, getSettings } from './settings';
 import { handleRollEvent } from './events';
+import { RollCancelledError } from '../dice-logic';
 
 export function registerFunctionTools(): void {
     try {
@@ -49,7 +50,8 @@ export function registerFunctionTools(): void {
         registerFunctionTool({
             name: 'RollTheDice',
             displayName: 'Dice Roll',
-            description: 'Rolls the dice using the provided formula and returns the numeric result. Use when it is necessary to roll the dice to determine the outcome of an action or when the user requests it.',
+            description:
+                'Rolls the dice using the provided formula and returns the numeric result. Use when it is necessary to roll the dice to determine the outcome of an action or when the user requests it.',
             parameters: rollDiceSchema,
             action: async (args: Record<string, unknown>) => {
                 debug('Executing function tool roll:', args);
@@ -62,7 +64,7 @@ export function registerFunctionTools(): void {
                         return `Failed to roll formula: ${formula}. Invalid notation.`;
                     }
 
-                    const allKeptRolls = result.diceGroups.flatMap(g => g.keptRolls);
+                    const allKeptRolls = result.diceGroups.flatMap((g) => g.keptRolls);
 
                     let message = who
                         ? `${who} rolls a ${formula}. The result is: ${result.total}`
@@ -76,6 +78,9 @@ export function registerFunctionTools(): void {
                     debug('Function tool roll completed:', result.total);
                     return message;
                 } catch (err) {
+                    if (err instanceof RollCancelledError) {
+                        return 'User has cancelled the roll.';
+                    }
                     error('Function tool roll failed', 'Dice Roll', [err]);
                     return `Failed to roll dice: ${formula}`;
                 }

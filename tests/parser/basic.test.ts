@@ -1,19 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { parseToAST, validateNotation } from '../../src/dice-logic/dice-parser';
-import type { DiceGroupNode, BinaryOpNode, NumericLiteralNode } from '../../src/dice-logic/types';
+import { parseToAST, validateNotation } from '../../src/dice-logic';
+import type { DiceGroupNode, BinaryOpNode, NumericLiteralNode } from '../../src/dice-logic';
 
 function asDice(node: unknown): DiceGroupNode {
-    if (node && typeof node === 'object' && 'type' in node && (node as { type: string }).type === 'DiceGroup') return node as DiceGroupNode;
+    if (node && typeof node === 'object' && 'type' in node && (node as { type: string }).type === 'DiceGroup')
+        return node as DiceGroupNode;
     throw new Error('Expected DiceGroup node');
 }
 
 function asBinop(node: unknown): BinaryOpNode {
-    if (node && typeof node === 'object' && 'type' in node && (node as { type: string }).type === 'BinaryOp') return node as BinaryOpNode;
+    if (node && typeof node === 'object' && 'type' in node && (node as { type: string }).type === 'BinaryOp')
+        return node as BinaryOpNode;
     throw new Error('Expected BinaryOp node');
 }
 
 function asNum(node: unknown): NumericLiteralNode {
-    if (node && typeof node === 'object' && 'type' in node && (node as { type: string }).type === 'NumericLiteral') return node as NumericLiteralNode;
+    if (node && typeof node === 'object' && 'type' in node && (node as { type: string }).type === 'NumericLiteral')
+        return node as NumericLiteralNode;
     throw new Error('Expected NumericLiteral node');
 }
 
@@ -300,6 +303,36 @@ describe('Parser - modifiers', () => {
         expect(ast.modifiers.targetFailure!.operator).toBe('<');
         expect(ast.modifiers.targetFailure!.value).toBe(3);
     });
+
+    it('parses critical success botch: 2d20csb', () => {
+        const ast = asDice(parseToAST('2d20csb'));
+        expect(ast.modifiers.criticalSuccess).toBe(true);
+        expect(ast.modifiers.criticalSuccessBotch).toBe(true);
+    });
+
+    it('parses critical failure botch: 2d20cfb', () => {
+        const ast = asDice(parseToAST('2d20cfb'));
+        expect(ast.modifiers.criticalFailure).toBe(true);
+        expect(ast.modifiers.criticalFailureBotch).toBe(true);
+    });
+
+    it('parses csb with compare point: 4d10csb>7', () => {
+        const ast = asDice(parseToAST('4d10csb>7'));
+        expect(ast.modifiers.criticalSuccessBotch).toBe(true);
+        if (ast.modifiers.criticalSuccess && typeof ast.modifiers.criticalSuccess !== 'boolean') {
+            expect(ast.modifiers.criticalSuccess.operator).toBe('>');
+            expect(ast.modifiers.criticalSuccess.value).toBe(7);
+        }
+    });
+
+    it('parses cfb with compare point: 4d10cfb<=2', () => {
+        const ast = asDice(parseToAST('4d10cfb<=2'));
+        expect(ast.modifiers.criticalFailureBotch).toBe(true);
+        if (ast.modifiers.criticalFailure && typeof ast.modifiers.criticalFailure !== 'boolean') {
+            expect(ast.modifiers.criticalFailure.operator).toBe('<=');
+            expect(ast.modifiers.criticalFailure.value).toBe(2);
+        }
+    });
 });
 
 describe('Parser - arithmetic', () => {
@@ -378,6 +411,34 @@ describe('Parser - validation', () => {
 
     it('rejects fullwidth unicode operators (2d6＋3)', () => {
         expect(validateNotation('2d6＋3')).toBe(false);
+    });
+});
+
+describe('Parser - forced rolls (@)', () => {
+    it('parses 2d20@20,1 with two forced values', () => {
+        const ast = asDice(parseToAST('2d20@20,1'));
+        expect(ast.forcedValues).toEqual([20, 1]);
+    });
+
+    it('parses 6d6@4,4,4,4,4,4 with six forced values', () => {
+        const ast = asDice(parseToAST('6d6@4,4,4,4,4,4'));
+        expect(ast.forcedValues).toEqual([4, 4, 4, 4, 4, 4]);
+    });
+
+    it('parses d8@7 with single forced value', () => {
+        const ast = asDice(parseToAST('d8@7'));
+        expect(ast.forcedValues).toEqual([7]);
+    });
+
+    it('parses forced values with modifiers: 4d6@3,3,3,3kh3', () => {
+        const ast = asDice(parseToAST('4d6@3,3,3,3kh3'));
+        expect(ast.forcedValues).toEqual([3, 3, 3, 3]);
+        expect(ast.modifiers.keepHighest).toBe(3);
+    });
+
+    it('validates notation with forced values', () => {
+        expect(validateNotation('2d20@20,1')).toBe(true);
+        expect(validateNotation('6d6@1,2,3,4,5,6')).toBe(true);
     });
 });
 

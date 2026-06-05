@@ -1,4 +1,14 @@
-import type { ASTNode, ComparePoint, DiceGroupResult, DiceRoll, FullRollResult, DiceGroupNode, ExplodeModifier, RerollModifier, UniqueModifier } from './types';
+import type {
+    ASTNode,
+    ComparePoint,
+    DiceGroupResult,
+    DiceRoll,
+    FullRollResult,
+    DiceGroupNode,
+    ExplodeModifier,
+    RerollModifier,
+    UniqueModifier,
+} from './types';
 import { formatModifiers, applyKeepDrop, formatRollValues, buildGroupKey } from './utils';
 import { debug } from '../utils/logging';
 import { MAX_EXPLOSIONS } from '../utils/constants';
@@ -29,14 +39,22 @@ function rollFudgeDie(randomFn?: () => number): { value: number; faceLabel: stri
 
 function matchesComparePoint(value: number, cp: ComparePoint): boolean {
     switch (cp.operator) {
-        case '>': return value > cp.value;
-        case '>=': return value >= cp.value;
-        case '<': return value < cp.value;
-        case '<=': return value <= cp.value;
-        case '=': return value === cp.value;
-        case '!=': return value !== cp.value;
-        case '<>': return value !== cp.value;
-        default: return false;
+        case '>':
+            return value > cp.value;
+        case '>=':
+            return value >= cp.value;
+        case '<':
+            return value < cp.value;
+        case '<=':
+            return value <= cp.value;
+        case '=':
+            return value === cp.value;
+        case '!=':
+            return value !== cp.value;
+        case '<>':
+            return value !== cp.value;
+        default:
+            return false;
     }
 }
 
@@ -55,7 +73,7 @@ function matchesExplosionCondition(
 
 // Modifier order 1: Min
 function applyMin(rolls: DiceRoll[], minValue: number): DiceRoll[] {
-    return rolls.map(r => ({
+    return rolls.map((r) => ({
         ...r,
         value: r.value < minValue ? minValue : r.value,
         minRaised: r.value < minValue ? true : undefined,
@@ -64,7 +82,7 @@ function applyMin(rolls: DiceRoll[], minValue: number): DiceRoll[] {
 
 // Modifier order 2: Max
 function applyMax(rolls: DiceRoll[], maxValue: number): DiceRoll[] {
-    return rolls.map(r => ({
+    return rolls.map((r) => ({
         ...r,
         value: r.value > maxValue ? maxValue : r.value,
         maxCapped: r.value > maxValue ? true : undefined,
@@ -88,7 +106,10 @@ function applyExplode(
             if (explode.compounding) {
                 let compoundValue = roll.value;
                 let currentVal = roll.value;
-                while (matchesExplosionCondition(currentVal, sides, explode, customFaces) && counter.count < MAX_EXPLOSIONS) {
+                while (
+                    matchesExplosionCondition(currentVal, sides, explode, customFaces) &&
+                    counter.count < MAX_EXPLOSIONS
+                ) {
                     const newVal = rollSingleDie(sides, customFaces, randomFn);
                     counter.count++;
                     const addVal = explode.penetrating ? Math.max(0, newVal - 1) : newVal;
@@ -114,7 +135,10 @@ function applyExplode(
                     exploded: false,
                     penetrating: explode.penetrating || undefined,
                 };
-                if (matchesExplosionCondition(explosionVal, sides, explode, customFaces) && counter.count < MAX_EXPLOSIONS) {
+                if (
+                    matchesExplosionCondition(explosionVal, sides, explode, customFaces) &&
+                    counter.count < MAX_EXPLOSIONS
+                ) {
                     const subRolls = applyExplode([newRoll], sides, explode, customFaces, randomFn, counter);
                     result.push(...subRolls);
                 } else {
@@ -137,12 +161,11 @@ function applyReroll(
     customFaces?: number[],
     randomFn?: () => number,
 ): DiceRoll[] {
-    return rolls.map(roll => {
+    return rolls.map((roll) => {
         let current = { ...roll };
         let attempts = 0;
-        const shouldReroll = (val: number) => reroll.comparePoint
-            ? matchesComparePoint(val, reroll.comparePoint)
-            : false;
+        const shouldReroll = (val: number) =>
+            reroll.comparePoint ? matchesComparePoint(val, reroll.comparePoint) : false;
 
         while (shouldReroll(current.value) && attempts < MAX_EXPLOSIONS) {
             current = { ...current, value: rollSingleDie(sides, customFaces, randomFn) };
@@ -161,7 +184,7 @@ function applyUnique(
     customFaces?: number[],
     randomFn?: () => number,
 ): DiceRoll[] {
-    const result = rolls.map(r => ({ ...r }));
+    const result = rolls.map((r) => ({ ...r }));
     let safety = 0;
     const rerolledOnce = new Set<number>();
 
@@ -202,36 +225,55 @@ function applyUnique(
 }
 
 function applyTargetSuccess(rolls: DiceRoll[], condition: ComparePoint): DiceRoll[] {
-    return rolls.map(r => ({
+    return rolls.map((r) => ({
         ...r,
         targetSuccess: matchesComparePoint(r.value, condition) ? true : undefined,
     }));
 }
 
 function applyTargetFailure(rolls: DiceRoll[], condition: ComparePoint): DiceRoll[] {
-    return rolls.map(r => ({
+    return rolls.map((r) => ({
         ...r,
         targetFailure: matchesComparePoint(r.value, condition) ? true : undefined,
     }));
 }
 
-function applyCriticalSuccess(rolls: DiceRoll[], sides: number, criticalMod: ComparePoint | true, customFaces?: number[]): DiceRoll[] {
-    return rolls.map(r => {
-        if (criticalMod === true) {
-            const maxVal = customFaces && customFaces.length > 0 ? Math.max(...customFaces) : sides;
-            return { ...r, criticalSuccess: r.value === maxVal ? true : undefined };
-        }
-        return { ...r, criticalSuccess: matchesComparePoint(r.value, criticalMod) ? true : undefined };
+function applyCriticalSuccess(
+    rolls: DiceRoll[],
+    sides: number,
+    criticalMod: ComparePoint | true,
+    customFaces?: number[],
+    botch?: boolean,
+): DiceRoll[] {
+    return rolls.map((r) => {
+        const isCrit =
+            criticalMod === true
+                ? r.value === (customFaces && customFaces.length > 0 ? Math.max(...customFaces) : sides)
+                : matchesComparePoint(r.value, criticalMod);
+        return {
+            ...r,
+            criticalSuccess: isCrit ? true : undefined,
+            criticalSuccessBotch: isCrit && botch ? true : undefined,
+        };
     });
 }
 
-function applyCriticalFailure(rolls: DiceRoll[], criticalMod: ComparePoint | true, customFaces?: number[]): DiceRoll[] {
-    return rolls.map(r => {
-        if (criticalMod === true) {
-            const minVal = customFaces && customFaces.length > 0 ? Math.min(...customFaces) : 1;
-            return { ...r, criticalFailure: r.value === minVal ? true : undefined };
-        }
-        return { ...r, criticalFailure: matchesComparePoint(r.value, criticalMod) ? true : undefined };
+function applyCriticalFailure(
+    rolls: DiceRoll[],
+    criticalMod: ComparePoint | true,
+    customFaces?: number[],
+    botch?: boolean,
+): DiceRoll[] {
+    return rolls.map((r) => {
+        const isCrit =
+            criticalMod === true
+                ? r.value === (customFaces && customFaces.length > 0 ? Math.min(...customFaces) : 1)
+                : matchesComparePoint(r.value, criticalMod);
+        return {
+            ...r,
+            criticalFailure: isCrit ? true : undefined,
+            criticalFailureBotch: isCrit && botch ? true : undefined,
+        };
     });
 }
 
@@ -299,7 +341,20 @@ function evaluateDiceGroup(
     let rolls: DiceRoll[];
 
     if (preRolls) {
-        rolls = preRolls.map(r => ({ ...r }));
+        rolls = preRolls.map((r) => ({ ...r }));
+    } else if (node.forcedValues) {
+        if (node.forcedValues.length !== node.count) {
+            throw new Error(
+                `Forced roll count mismatch for ${node.count}d${node.sides}: ` +
+                    `expected ${node.count} value(s), got ${node.forcedValues.length} ` +
+                    `(${node.forcedValues.join(',')})`,
+            );
+        }
+        rolls = node.forcedValues.map((val) => ({
+            sides: node.sides,
+            value: val,
+            dropped: false,
+        }));
     } else {
         rolls = [];
 
@@ -360,34 +415,51 @@ function evaluateDiceGroup(
 
     // Order 9: Critical success
     if (node.modifiers.criticalSuccess) {
-        rolls = applyCriticalSuccess(rolls, node.sides, node.modifiers.criticalSuccess, node.customFaces);
+        rolls = applyCriticalSuccess(
+            rolls,
+            node.sides,
+            node.modifiers.criticalSuccess,
+            node.customFaces,
+            node.modifiers.criticalSuccessBotch,
+        );
     }
 
     // Order 10: Critical failure
     if (node.modifiers.criticalFailure) {
-        rolls = applyCriticalFailure(rolls, node.modifiers.criticalFailure, node.customFaces);
+        rolls = applyCriticalFailure(
+            rolls,
+            node.modifiers.criticalFailure,
+            node.customFaces,
+            node.modifiers.criticalFailureBotch,
+        );
     }
 
     // Order 11: Sort
     if (node.modifiers.sort) {
-        const dropped = rolls.filter(r => r.dropped);
-        const kept = rolls.filter(r => !r.dropped);
-        kept.sort((a, b) =>
-            node.modifiers.sort === 'asc' ? a.value - b.value : b.value - a.value,
-        );
+        const dropped = rolls.filter((r) => r.dropped);
+        const kept = rolls.filter((r) => !r.dropped);
+        kept.sort((a, b) => (node.modifiers.sort === 'asc' ? a.value - b.value : b.value - a.value));
         rolls = [...kept, ...dropped];
     }
 
-    const keptRolls = rolls.filter(r => !r.dropped);
-    const droppedRolls = rolls.filter(r => r.dropped);
+    const keptRolls = rolls.filter((r) => !r.dropped);
+    const droppedRolls = rolls.filter((r) => r.dropped);
 
     let sum: number;
     if (node.modifiers.targetSuccess) {
-        const successCount = keptRolls.filter(r => r.targetSuccess).length;
-        const failureCount = keptRolls.filter(r => r.targetFailure).length;
+        const successCount = keptRolls.filter((r) => r.targetSuccess).length;
+        const failureCount = keptRolls.filter((r) => r.targetFailure).length;
         sum = successCount - failureCount;
     } else {
         sum = keptRolls.reduce((acc, r) => acc + r.value, 0);
+    }
+
+    // Botch adjustment: csb adds +1 per crit success, cfb subtracts 1 per crit failure
+    if (node.modifiers.criticalSuccessBotch) {
+        sum += keptRolls.filter((r) => r.criticalSuccessBotch).length;
+    }
+    if (node.modifiers.criticalFailureBotch) {
+        sum -= keptRolls.filter((r) => r.criticalFailureBotch).length;
     }
 
     const notationParts: string[] = [];
@@ -474,11 +546,28 @@ function evaluateAST(
     return { value: 0, diceGroups: [] };
 }
 
-function formatDiceGroup(group: DiceGroupResult): string {
-    if (group.rolls.length === 0) {
-        return '(0)';
+function formatASTWithValues(node: ASTNode, diceGroups: DiceGroupResult[], groupIndex: { current: number }): string {
+    if (node.type === 'NumericLiteral') {
+        return String(node.value);
     }
-    return `(${formatRollValues(group.rolls)})`;
+    if (node.type === 'DiceGroup') {
+        const group = diceGroups[groupIndex.current++];
+        const values = formatRollValues(group.rolls, '+');
+        return diceGroups.length === 1 ? values : `(${values})`;
+    }
+    if (node.type === 'BinaryOp') {
+        const left = formatASTWithValues(node.left, diceGroups, groupIndex);
+        const right = formatASTWithValues(node.right, diceGroups, groupIndex);
+        return `${left}${node.operator}${right}`;
+    }
+    if (node.type === 'UnaryOp') {
+        const operand = formatASTWithValues(node.operand, diceGroups, groupIndex);
+        return `${node.operator}${operand}`;
+    }
+    if (node.type === 'Parenthesized') {
+        return `(${formatASTWithValues(node.expression, diceGroups, groupIndex)})`;
+    }
+    return '';
 }
 
 export function evaluateDiceAST(
@@ -487,24 +576,17 @@ export function evaluateDiceAST(
     preGeneratedValues?: Map<string, DiceRoll[]>,
     randomFn?: () => number,
 ): FullRollResult {
-    debug('Evaluating AST for:', originalNotation);
+    debug('DiceEvaluator: Evaluating AST for:', originalNotation, preGeneratedValues);
     const result = evaluateAST(ast, '+', preGeneratedValues, { current: 0 }, randomFn);
     const { value: total, diceGroups } = result;
-
-    const groupDetails: string[] = [];
-    for (let i = 0; i < diceGroups.length; i++) {
-        const group = diceGroups[i];
-        if (i === 0) {
-            groupDetails.push(formatDiceGroup(group));
-        } else {
-            const op = group.operation === '-' ? ' - ' : ' + ';
-            groupDetails.push(`${op}${formatDiceGroup(group)}`);
-        }
+    let details: string;
+    if (diceGroups.length === 1) {
+        details = formatRollValues(diceGroups[0].rolls, ',');
+    } else {
+        details = diceGroups.map((g) => `(${formatRollValues(g.rolls, ',')})`).join(' ');
     }
-
-    const details = groupDetails.join('');
-    const formatted = `${originalNotation}: ${details} = ${total}`;
-
+    const formatted = formatASTWithValues(ast, diceGroups, { current: 0 });
+    debug('DiceEvaluator: Total:', total, 'details:', details, 'formatted:', formatted, 'groups:', diceGroups);
     return {
         notation: originalNotation,
         diceGroups,
@@ -514,7 +596,13 @@ export function evaluateDiceAST(
     };
 }
 
-export function getRawDiceValues(node: DiceGroupNode, randomFn?: () => number): { value: number; faceLabel?: string }[] {
+export function getRawDiceValues(
+    node: DiceGroupNode,
+    randomFn?: () => number,
+): { value: number; faceLabel?: string }[] {
+    if (node.forcedValues) {
+        return node.forcedValues.map((val) => ({ value: val }));
+    }
     const rawValues: { value: number; faceLabel?: string }[] = [];
     if (node.fudge) {
         for (let i = 0; i < node.count; i++) {
@@ -538,7 +626,7 @@ export function extractRawValuesFromAST(ast: ASTNode, randomFn?: () => number): 
             const idx = groupIndex++;
             const groupKey = buildGroupKey(node, idx);
             const rawValues = getRawDiceValues(node, randomFn);
-            const rolls: DiceRoll[] = rawValues.map(val => ({
+            const rolls: DiceRoll[] = rawValues.map((val) => ({
                 sides: node.sides,
                 value: val.value,
                 faceLabel: val.faceLabel,

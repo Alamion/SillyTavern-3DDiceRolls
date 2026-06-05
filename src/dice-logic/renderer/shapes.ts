@@ -1,11 +1,5 @@
 import { Body, Vec3 } from 'cannon-es';
-import {
-    BufferGeometry,
-    Vector3,
-    type Mesh,
-    type Material,
-    Quaternion as ThreeQuaternion,
-} from 'three';
+import { BufferGeometry, Vector3, type Mesh, type Material, Quaternion as ThreeQuaternion } from 'three';
 import type { DiceGeometryData } from './geometries';
 import { debug } from '../../utils/logging';
 
@@ -14,10 +8,10 @@ function cannonQuaternionToThree(cannonQuat: { x: number; y: number; z: number; 
 }
 
 interface DiceVector {
-    pos: { x: number; y: number; z: number }
-    velocity: { x: number; y: number; z: number }
-    angular: { x: number; y: number; z: number }
-    axis: { x: number; y: number; z: number; w: number }
+    pos: { x: number; y: number; z: number };
+    velocity: { x: number; y: number; z: number };
+    angular: { x: number; y: number; z: number };
+    axis: { x: number; y: number; z: number; w: number };
 }
 
 function createDefaultVector(): DiceVector {
@@ -130,12 +124,8 @@ export abstract class DiceShape {
     makeRandomVector(vector: { x: number; y: number }): { x: number; y: number } {
         const random_angle = (Math.random() * Math.PI) / 5 - Math.PI / 5 / 2;
         const vec = {
-            x:
-                vector.x * Math.cos(random_angle) -
-                vector.y * Math.sin(random_angle),
-            y:
-                vector.x * Math.sin(random_angle) +
-                vector.y * Math.cos(random_angle),
+            x: vector.x * Math.cos(random_angle) - vector.y * Math.sin(random_angle),
+            y: vector.x * Math.sin(random_angle) + vector.y * Math.cos(random_angle),
         };
         if (vec.x === 0) vec.x = 0.01;
         if (vec.y === 0) vec.y = 0.01;
@@ -161,13 +151,10 @@ export abstract class DiceShape {
 
         for (let i = 0; i < Math.min(5, groups.length); i++) {
             const g = groups[i];
-            debug(
-                `  Group ${i}: start=${g.start}, count=${g.count}, materialIndex=${g.materialIndex}`,
-            );
+            debug(`  Group ${i}: start=${g.start}, count=${g.count}, materialIndex=${g.materialIndex}`);
         }
 
-        const materialNormals: Map<number, { angle: number; groupIndex: number }> =
-            new Map();
+        const materialNormals: Map<number, { angle: number; groupIndex: number }> = new Map();
 
         for (let i = 0; i < groups.length; i++) {
             const group = groups[i];
@@ -182,9 +169,7 @@ export abstract class DiceShape {
 
             const startVertex = group.start * 3;
             if (startVertex + 2 >= normals.length) {
-                debug(
-                    `  Skipping group ${i}: startVertex ${startVertex} >= normals.length ${normals.length}`,
-                );
+                debug(`  Skipping group ${i}: startVertex ${startVertex} >= normals.length ${normals.length}`);
                 continue;
             }
 
@@ -192,14 +177,8 @@ export abstract class DiceShape {
             const ny = normals[startVertex + 1];
             const nz = normals[startVertex + 2];
 
-            if (
-                !Number.isFinite(nx) ||
-                !Number.isFinite(ny) ||
-                !Number.isFinite(nz)
-            ) {
-                debug(
-                    `  Skipping group ${i}: normal has non-finite components (${nx}, ${ny}, ${nz})`,
-                );
+            if (!Number.isFinite(nx) || !Number.isFinite(ny) || !Number.isFinite(nz)) {
+                debug(`  Skipping group ${i}: normal has non-finite components (${nx}, ${ny}, ${nz})`);
                 continue;
             }
 
@@ -210,9 +189,7 @@ export abstract class DiceShape {
                 continue;
             }
 
-            const worldNormal = normal
-                .clone()
-                .applyQuaternion(cannonQuaternionToThree(this.body.quaternion));
+            const worldNormal = normal.clone().applyQuaternion(cannonQuaternionToThree(this.body.quaternion));
 
             if (worldNormal.lengthSq() === 0) {
                 debug(`  Skipping group ${i}: zero-length worldNormal`);
@@ -224,9 +201,7 @@ export abstract class DiceShape {
             const dot = n1.dot(n2);
 
             if (!Number.isFinite(dot)) {
-                debug(
-                    `  Skipping group ${i}: dot product is non-finite (${dot})`,
-                );
+                debug(`  Skipping group ${i}: dot product is non-finite (${dot})`);
                 continue;
             }
 
@@ -239,15 +214,12 @@ export abstract class DiceShape {
             }
         }
 
-        debug(`DiceShape: Found ${materialNormals.size} unique materials:`,materialNormals);
+        debug(`DiceShape: Found ${materialNormals.size} unique materials:`, materialNormals);
 
         if (materialNormals.size === 0) {
             const randomIndex = Math.floor(Math.random() * this.values.length);
-            const fallbackValue =
-                (this.values?.[randomIndex] ?? randomIndex + 1) || 1;
-            debug(
-                `DiceShape: No valid face normals found, using fallback random value: ${fallbackValue}`,
-            );
+            const fallbackValue = (this.values?.[randomIndex] ?? randomIndex + 1) || 1;
+            debug(`DiceShape: No valid face normals found, using fallback random value: ${fallbackValue}`);
             return fallbackValue;
         }
 
@@ -271,8 +243,7 @@ export abstract class DiceShape {
             result = this.values[faceIndex];
         } else {
             // Fallback: map as best we can to a valid index
-            const approxIndex =
-                Math.max(0, Math.min(this.values.length - 1, Math.abs(faceIndex) % this.values.length));
+            const approxIndex = Math.max(0, Math.min(this.values.length - 1, Math.abs(faceIndex) % this.values.length));
             result = this.values?.[approxIndex] ?? approxIndex + 1;
         }
 
@@ -287,11 +258,7 @@ export abstract class DiceShape {
         const pos = this.body.position;
         const quat = this.body.quaternion;
 
-        if (
-            !Number.isFinite(pos.x) ||
-            !Number.isFinite(pos.y) ||
-            !Number.isFinite(pos.z)
-        ) {
+        if (!Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(pos.z)) {
             debug('DiceShape: Invalid position detected, skipping update');
             return;
         }
@@ -311,9 +278,7 @@ export abstract class DiceShape {
     }
 
     setOpacity(opacity: number): void {
-        const materials = Array.isArray(this.geometry.material)
-            ? this.geometry.material
-            : [this.geometry.material];
+        const materials = Array.isArray(this.geometry.material) ? this.geometry.material : [this.geometry.material];
 
         for (const material of materials) {
             if (material) {
@@ -333,29 +298,13 @@ export abstract class DiceShape {
     }
 
     create(): void {
-        this.body.position.set(
-            this.vector.pos.x,
-            this.vector.pos.y,
-            this.vector.pos.z,
-        );
+        this.body.position.set(this.vector.pos.x, this.vector.pos.y, this.vector.pos.z);
         this.body.quaternion.setFromAxisAngle(
-            new Vec3(
-                this.vector.axis.x,
-                this.vector.axis.y,
-                this.vector.axis.z,
-            ),
+            new Vec3(this.vector.axis.x, this.vector.axis.y, this.vector.axis.z),
             this.vector.axis.w * Math.PI * 2,
         );
-        this.body.angularVelocity.set(
-            this.vector.angular.x,
-            this.vector.angular.y,
-            this.vector.angular.z,
-        );
-        this.body.velocity.set(
-            this.vector.velocity.x,
-            this.vector.velocity.y,
-            this.vector.velocity.z,
-        );
+        this.body.angularVelocity.set(this.vector.angular.x, this.vector.angular.y, this.vector.angular.z);
+        this.body.velocity.set(this.vector.velocity.x, this.vector.velocity.y, this.vector.velocity.z);
         this.body.linearDamping = 0.1;
         this.body.angularDamping = 0.1;
         this.body.wakeUp();
@@ -405,7 +354,10 @@ export class D2Dice extends DiceShape {
     }
 }
 
-const DICE_CLASSES: Record<number, new (w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) => DiceShape> = {
+const DICE_CLASSES: Record<
+    number,
+    new (w: number, h: number, data: DiceGeometryData, vector?: { x: number; y: number }) => DiceShape
+> = {
     2: D2Dice,
     4: D4Dice,
     6: D6Dice,
