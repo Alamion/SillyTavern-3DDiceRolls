@@ -120,6 +120,10 @@ export function formatRollValues(rolls: DiceRoll[], divider: ',' | '+'): string 
                     s = `${s}!!`;
                 } else if (r.exploded) {
                     s = r.penetrating ? `${s}!p` : `${s}!`;
+                } else if (r.criticalSuccessBotch) {
+                    s = `${s}***`;
+                } else if (r.criticalFailureBotch) {
+                    s = `${s}___`;
                 } else if (r.criticalSuccess) {
                     s = `${s}**`;
                 } else if (r.criticalFailure) {
@@ -133,9 +137,23 @@ export function formatRollValues(rolls: DiceRoll[], divider: ',' | '+'): string 
             })
             .join(', ');
     } else {
+        const hasTargetFlags = rolls.some((r) => r.hasTarget);
         const new_rolls = rolls
             .filter((r) => !r.dropped)
-            .map((r) => String(r.value))
+            .map((r) => {
+                let valStr: string;
+                if (hasTargetFlags) {
+                    valStr = r.targetSuccess ? '1' : r.targetFailure ? '-1' : '0';
+                } else {
+                    valStr = String(r.value);
+                }
+                if (r.criticalSuccessBotch) {
+                    valStr += '+1';
+                } else if (r.criticalFailureBotch) {
+                    valStr += '-1';
+                }
+                return valStr;
+            })
             .join('+');
         return new_rolls.replace(/\+-/g, '-');
     }

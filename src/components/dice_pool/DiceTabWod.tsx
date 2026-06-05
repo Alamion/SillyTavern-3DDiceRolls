@@ -1,19 +1,39 @@
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useMemo } from 'react';
 import { useDiceRoller } from '../DiceRollerContext';
 import { handleDiceNotation } from '../../dice-logic';
+import { blendColors } from '../../utils/recolor_svg';
 import DiceButton from './DiceButton';
 import { DiceD10 } from '../2d_dices';
 import type { DiceConfig } from '../dice-config';
+
+const CRIMSON = '#DC143C';
 
 const WodTab = memo(function WodTab() {
     const [wodDifficulty, setWodDifficulty] = useState(6);
     const { settings, notationInput, setNotationInput } = useDiceRoller();
 
-    const wodConfig: DiceConfig = {
-        notation: `d10>=${wodDifficulty}`,
-        Component: DiceD10,
-        label: 'd10',
-    };
+    const wodConfig: DiceConfig = useMemo(
+        () => ({
+            notation: `d10>=${wodDifficulty}`,
+            Component: DiceD10,
+            label: 'd10',
+        }),
+        [wodDifficulty],
+    );
+
+    const botchConfig: DiceConfig = useMemo(
+        () => ({
+            notation: `d10>=${wodDifficulty}f=1`,
+            Component: DiceD10,
+            label: 'd10',
+        }),
+        [wodDifficulty],
+    );
+
+    const botchPrimaryColor = useMemo(
+        () => blendColors(settings.primaryDiceColor, CRIMSON, 0.5),
+        [settings.primaryDiceColor],
+    );
 
     const onAdd = useCallback(() => {
         setNotationInput(handleDiceNotation(notationInput, `d10>=${wodDifficulty}`, true, wodDifficulty));
@@ -23,6 +43,18 @@ const WodTab = memo(function WodTab() {
         (_config: DiceConfig, e: React.MouseEvent) => {
             e.preventDefault();
             setNotationInput(handleDiceNotation(notationInput, `d10>=${wodDifficulty}`, false, wodDifficulty));
+        },
+        [notationInput, wodDifficulty, setNotationInput],
+    );
+
+    const onAddBotch = useCallback(() => {
+        setNotationInput(handleDiceNotation(notationInput, `d10>=${wodDifficulty}f=1`, true, wodDifficulty));
+    }, [notationInput, wodDifficulty, setNotationInput]);
+
+    const onRemoveBotch = useCallback(
+        (_config: DiceConfig, e: React.MouseEvent) => {
+            e.preventDefault();
+            setNotationInput(handleDiceNotation(notationInput, `d10>=${wodDifficulty}f=1`, false, wodDifficulty));
         },
         [notationInput, wodDifficulty, setNotationInput],
     );
@@ -61,6 +93,13 @@ const WodTab = memo(function WodTab() {
                     secondaryColor={settings.secondaryDiceColor}
                     onAdd={onAdd}
                     onRemove={onRemove}
+                />
+                <DiceButton
+                    config={botchConfig}
+                    primaryColor={botchPrimaryColor}
+                    secondaryColor={settings.secondaryDiceColor}
+                    onAdd={onAddBotch}
+                    onRemove={onRemoveBotch}
                 />
             </div>
         </div>

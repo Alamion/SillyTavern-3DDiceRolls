@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.1
+
+### Features
+
+- **Botch dice in WoD tab** — Added a second d10 dice button with botch mechanics (`d10>={difficulty}f=1`). Uses `blendColors` to tint 15% crimson red for visual distinction. Both dice buttons are properly memoized. Notation editor correctly preserves the `f=1` suffix when incrementing/decrementing botch dice.
+
+### Bug Fixes
+
+- **Botch markers now visible in details and formatted** — `csb`/`cfb` adjustments on individual dice are now visually indicated: details shows `***` (critical success botch) and `___` (critical failure botch); formatted shows `{value}+1`/`{value}-1` per affected die.
+- **Target success rolls show count instead of raw values in formatted** — Rolls with a compare point (e.g. `1d10>=6`) now display `1+0+1` in formatted output instead of `10+3+7`, showing each die's binary success/failure result.
+
 ## 1.4.0
 
 ### Features

@@ -159,6 +159,7 @@ export interface DiceRoll {
     criticalFailure?: boolean;
     criticalSuccessBotch?: boolean;
     criticalFailureBotch?: boolean;
+    hasTarget?: boolean;
     targetSuccess?: boolean;
     targetFailure?: boolean;
     minRaised?: boolean;

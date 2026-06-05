@@ -153,6 +153,7 @@ export function handleDiceNotation(
     const btnSides: number | 'F' = btnSidesRaw === 'F' ? 'F' : parseInt(btnSidesRaw);
     const btnSuffix = btnM[3] || '';
     const isWod = btnSuffix.startsWith('>=');
+    const extraSuffix = isWod ? btnSuffix.replace(/^>=\d+/, '') : '';
 
     const parts = parseParts(prev);
     const matchIdx = findLastMatch(parts, btnSides);
@@ -161,7 +162,7 @@ export function handleDiceNotation(
         const part = parts[matchIdx];
         if (increment) {
             const newCount = part.count + 1;
-            const suffix = isWod ? `>=${wodDifficulty}` : part.modifier;
+            const suffix = isWod ? `>=${wodDifficulty}${extraSuffix}` : part.modifier;
             parts[matchIdx] = {
                 ...part,
                 raw: makePartRaw(newCount, part.sides, suffix),
@@ -173,7 +174,7 @@ export function handleDiceNotation(
             if (newCount <= 0) {
                 parts.splice(matchIdx, 1);
             } else {
-                const suffix = isWod ? `>=${wodDifficulty}` : part.modifier;
+                const suffix = isWod ? `>=${wodDifficulty}${extraSuffix}` : part.modifier;
                 parts[matchIdx] = {
                     ...part,
                     raw: makePartRaw(newCount, part.sides, suffix),
@@ -187,7 +188,7 @@ export function handleDiceNotation(
 
     if (increment) {
         const dot = prev.trim() ? ' + ' : '';
-        const addNotation = isWod ? `1d10>=${wodDifficulty}` : btnNotation;
+        const addNotation = isWod ? `1d10>=${wodDifficulty}${extraSuffix}` : btnNotation;
         return `${prev}${dot}${addNotation}`;
     }
     return prev;

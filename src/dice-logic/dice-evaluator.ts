@@ -228,6 +228,7 @@ function applyTargetSuccess(rolls: DiceRoll[], condition: ComparePoint): DiceRol
     return rolls.map((r) => ({
         ...r,
         targetSuccess: matchesComparePoint(r.value, condition) ? true : undefined,
+        hasTarget: true,
     }));
 }
 
@@ -235,6 +236,7 @@ function applyTargetFailure(rolls: DiceRoll[], condition: ComparePoint): DiceRol
     return rolls.map((r) => ({
         ...r,
         targetFailure: matchesComparePoint(r.value, condition) ? true : undefined,
+        hasTarget: true,
     }));
 }
 
