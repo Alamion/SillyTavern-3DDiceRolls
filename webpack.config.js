@@ -1,7 +1,10 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 
-module.exports = {
+module.exports = (_env, argv) => ({
+    // Development default is `eval`, which wraps modules in eval() where `import.meta` is a
+    // syntax error; source maps keep dev builds debuggable without it.
+    devtool: argv.mode === 'production' ? false : 'source-map',
     entry: path.join(__dirname, 'src/index.tsx'),
     output: {
         path: path.join(__dirname, 'dist/'),
@@ -11,6 +14,11 @@ module.exports = {
         extensions: ['.ts', '.tsx', '.js', '.jsx', '.scss', '.css'],
     },
     module: {
+        parser: {
+            // Keep `import.meta.url` for the browser: the bundle runs as a module script and
+            // resolves its sounds relative to its own URL.
+            javascript: { importMeta: false },
+        },
         rules: [
             {
                 test: /\.tsx?$/,
@@ -44,4 +52,4 @@ module.exports = {
             }),
         ],
     },
-};
+});

@@ -8,7 +8,6 @@ interface DiceSvgProps {
     mode?: 'tile' | 'image' | 'tile_x' | 'tile_y';
     style?: React.CSSProperties;
     className?: string;
-    onClick?: () => void;
     d100Tens?: string;
     d100Ones?: string;
 }
@@ -310,7 +309,6 @@ function DiceSvg({
     mode = 'image',
     style,
     className,
-    onClick,
     diceType,
     d100Tens,
     d100Ones,
@@ -328,7 +326,6 @@ function DiceSvg({
             mode={mode}
             style={style}
             className={className}
-            onClick={onClick}
             alt={`Dice${diceType.toUpperCase()}`}
         />
     );

@@ -1,5 +1,5 @@
 import type { SillyTavernContext } from '../global';
-import { debug, error, warn } from './logging';
+import { debug, error, consoleWarn } from './logging';
 import { DEFAULT_SETTINGS, MODULE_NAME } from './constants';
 import { registerRollCommand } from './commands';
 import { registerFunctionTools } from './function-tools';
@@ -35,15 +35,16 @@ export function updateSettings(newSettings: Partial<DiceRollerSettings>): void {
 }
 
 function saveSettings(): void {
-    const context = getContext();
+    const context = getLiveContext();
     if (!context) {
-        warn('No context available - cannot save settings', 'Settings');
+        consoleWarn('No context available - cannot save settings', 'Settings');
         return;
     }
 
     try {
         if (context.extensionSettings) {
-            context.extensionSettings[MODULE_NAME] = { ...currentSettings };
+            // Merge: favorites and recent notations share this namespace.
+            context.extensionSettings[MODULE_NAME] = { ...context.extensionSettings[MODULE_NAME], ...currentSettings };
         }
 
         if (context.saveSettingsDebounced) {
@@ -90,12 +91,21 @@ export function initSettings(): void {
     }
 }
 
+/**
+ * Cached context: use it for app functions only. Data fields (`chatMetadata`, `chat`, …) are
+ * captured when the context is built and the app reassigns them, so read those through
+ * `getLiveContext()`.
+ */
 export function getContext(): SillyTavernContext | null {
     if (cachedContext === undefined) {
         cachedContext =
             typeof globalThis.SillyTavern?.getContext === 'function' ? globalThis.SillyTavern.getContext() : null;
     }
     return cachedContext;
+}
+
+export function getLiveContext(): SillyTavernContext | null {
+    return typeof globalThis.SillyTavern?.getContext === 'function' ? globalThis.SillyTavern.getContext() : null;
 }
 
 export interface MixedRollConfig {

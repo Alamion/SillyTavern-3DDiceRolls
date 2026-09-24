@@ -1,4 +1,4 @@
-import { debug, error, warn } from './logging';
+import { debug, error, warn, consoleWarn } from './logging';
 import { getContext, getSettings } from './settings';
 import { handleRollEvent } from './events';
 import { RollCancelledError } from '../dice-logic';
@@ -7,14 +7,14 @@ export function registerFunctionTools(): void {
     try {
         const context = getContext();
         if (!context) {
-            warn('No context available for function tools', 'Function Tools');
+            consoleWarn('No context available for function tools', 'Function Tools');
             return;
         }
 
         const { registerFunctionTool, unregisterFunctionTool, isToolCallingSupported } = context;
 
         if (!registerFunctionTool || !unregisterFunctionTool) {
-            warn('Function tools are not supported in this SillyTavern version', 'Function Tools');
+            consoleWarn('Function tools are not supported in this SillyTavern version', 'Function Tools');
             return;
         }
 

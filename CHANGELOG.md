@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.4.2 (2026-09-25)
+
+### Improvements
+
+- **The dice panel survives errors** — if a component or the 3D engine crashes, the drawer shows the error with a "Try again" button instead of going blank; the dice icon stays usable. (T-027)
+
+### Bug Fixes
+
+- **Favorites and recent rolls survive settings changes** — changing any setting used to erase saved favorites and recent notations on the next reload. (F-001)
+- **Roll history is saved with its chat** — history was only saved in chats that happened to carry an internal id set by certain macros, so in most chats it vanished on switching; it could also be read from or written to the previously opened chat, and a roll made just before a switch could land in the next chat. (F-002)
+- **A roll stays with the chat it was rolled in** — switching chats while 3D dice were still rolling put the result into the newly opened chat's history (and its input box or chat, when those outputs are on). The result now goes to the history of the chat it was started in, is added when you return to that chat, and a toast shows it instead of posting it to the wrong chat. (F-035)
+- **All dice fit a narrow panel** — in a narrow drawer the dice wrapped to two per row and pushed the notation editor and Roll button out of view; dice now shrink to keep more per row, only the dice area scrolls, and the editor and buttons always stay visible. (F-036)
+- **No error when the dice panel is torn down** — the chat-change listener is now removed with the app's `removeListener`; the old cleanup threw a TypeError. (F-005)
+- **Favorites and Recent entries are clickable** — clicking an entry in the Favorites or Recent history tab now puts its notation into the editor; it used to do nothing. (F-006)
+- **Roll button waits for valid notation** — the button is disabled while the notation is invalid, matching the Enter key. (F-012)
+- **The notation editor catches malformed notation** — validation used to accept incomplete notation such as `2d6+`, `(2d6`, or `2d6>=` (the missing part silently counted as 0), `0d6` and `1d0` (rolled as `1d6`), a bare `f`, a wrong number of `@` values, and anything left after the roll; the editor now marks these invalid and the Roll button stays disabled. Rolling through `/roll`, `{{ddroll}}`, and events is unchanged. (F-016, partly)
+- **Cancelling a roll is no longer an error** — pressing ✗ on the loading bar logged an uncaught `RollCancelledError` in the browser console; the panel now treats cancelling as a normal outcome. (F-037)
+- **WoD difficulty stays put and stays consistent** — switching dice tabs no longer resets the difficulty to 6, and changing it moves the thresholds already in the editor instead of mixing `>=6` and `>=8` terms. (F-013)
+- **Mixed 3D rolls keep each die's value** — in `1d7+2d6` the d7 (no 3D model) took the first d6's physical value; it is now rolled in 2D alongside the 3D dice. (F-004)
+- **Exploding d100 throws a proper d100** — a d100 explosion threw two plain d10s and read their values in the wrong order; it now throws the same tens-and-ones pair as the original die. (F-010)
+- **Compounding dice keep compounding in 3D** — `!!` stopped after one extra die in 3D while 2D kept chaining; both now chain until a die does not explode. (F-011)
+- **No impossible values from a physics glitch** — an invalid physics value was replaced by a random 1–20 even on a d6; the roll now falls back to 2D. (F-014)
+- **All dice fit on narrow screens** — the dice grid wraps into more rows when the drawer is narrow instead of clipping dice at the edge, and on mobile widths the drawer scrolls so lower rows are reachable.
+- **Less work on every mouse move** — while 3D dice were loaded, each mouse move rewrote the page cursor style even when nothing changed, waking every page observer; it is now written only when it changes.
+- **Dice sounds load with other extensions installed** — sounds were looked up next to whichever extension bundle named `dist/index.js` loaded last (for example WorldInfo-Workspace), producing a burst of 404 errors and silent dice; they now load from this extension's own folder. (F-034)
+- **Dice no longer stay on screen after a failed roll** — if a 3D roll fails midway, the thrown dice are dismissed before the 2D fallback. (F-018)
+- **3D rerolls follow the same limit as 2D** — 3D rerolls stopped after 10 attempts regardless of the notation. (F-031)
+- **Clicking a 3D die no longer clicks the chat under it** — rerolling a die by clicking it used to also press whatever SillyTavern button or message lay beneath the dice. (F-008)
+- **3D dice are read only once they have settled** — a die must stay still for 0.2 s and stop tipping before its face is read; dice could be read while still rolling onto another face, and a pile no longer jitters itself awake. (F-009)
+- **Accept and Cancel act on the current roll only** — with several rolls in flight the buttons accepted or cancelled all of them, and the loading bar disappeared while other rolls were still running. (F-019)
+- **3D dice no longer spawn inside each other** — every thrown, rethrown, or exploding die starts clear of the others, so dice are not blasted apart at the start of a throw. (F-022)
+- **Fair 3D start orientations** — a die's starting rotation was drawn from a skewed distribution; it is now uniform, which matters most when dice barely tumble. (F-023)
+- **One clear message when 3D dice cannot run** — instead of a raw "Unified roll failed" toast on every roll, the first failure explains that the roll fell back to 2D and later ones go to the console. (F-025)
+- **No toasts about optional features on load** — messages such as "Macro system not available" are now written to the console only. (F-026)
+- **Native toasts, smaller bundle** — notifications use SillyTavern's own toastr instead of a bundled copy with its own stylesheet; the plugin bundle shrinks by about 90 KB. (F-027)
+- **Safe against double initialization** — the plugin sets itself up once even if the settings-loaded event fires again, and both React roots are kept so they can be unmounted. (F-028)
+- **Typing in the notation editor stays in the plugin** — keystrokes no longer bubble to SillyTavern's document-level handlers; Escape still does. (F-029)
+- **2D dice images are plain images** — the unused clickable-image path (an `<img role="button">`) was removed; dice buttons are real buttons. (F-030)
+
 ## 1.4.1
 
 ### Features

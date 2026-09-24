@@ -1,6 +1,7 @@
 import { LexerToken, tokenize } from './dice-lexer';
 import type { ASTNode, ComparePoint, DiceModifiers, TokenType } from './types';
 import { debug, warn } from '../utils/logging';
+import { NotationError } from './errors';
 
 const PRECEDENCE: Record<string, number> = {
     '^': 4,
@@ -28,8 +29,21 @@ class TokenStream {
     private tokens: LexerToken[];
     private position: number = 0;
 
-    constructor(tokens: LexerToken[]) {
+    /**
+     * Strict streams reject malformed notation; lenient ones (rolling) keep the historical
+     * recovery — warn and continue — so notation that rolls today keeps rolling (F-016, T-008).
+     */
+    constructor(
+        tokens: LexerToken[],
+        readonly strict = false,
+    ) {
         this.tokens = tokens;
+    }
+
+    /** Reports malformed notation: throws when strict, warns and lets the caller recover otherwise. */
+    fail(message: string): void {
+        if (this.strict) throw new NotationError(message);
+        warn(message, 'Parser');
     }
 
     peek(): LexerToken | undefined {
@@ -122,7 +136,7 @@ function parsePrimary(stream: TokenStream): ASTNode {
     const token = stream.peek();
 
     if (!token) {
-        warn('Unexpected end of input', 'Parser');
+        stream.fail('Unexpected end of input');
         return { type: 'NumericLiteral', value: 0 };
     }
 
@@ -131,6 +145,8 @@ function parsePrimary(stream: TokenStream): ASTNode {
         const expr = parseExpression(stream);
         if (stream.peek() && stream.peek()!.type === 'RPAREN') {
             stream.consume();
+        } else if (stream.strict) {
+            throw new NotationError('Missing closing parenthesis');
         }
         return { type: 'Parenthesized', expression: expr };
     }
@@ -154,11 +170,12 @@ function parsePrimary(stream: TokenStream): ASTNode {
     }
 
     if (token.type === 'END') {
+        if (stream.strict) throw new NotationError('Unexpected end of input');
         stream.consume();
         return { type: 'NumericLiteral', value: 0 };
     }
 
-    warn(`Unexpected token: ${token.type} (${token.text})`, 'Parser');
+    stream.fail(`Unexpected token: ${token.type} (${token.text})`);
     stream.consume();
     return { type: 'NumericLiteral', value: 0 };
 }
@@ -192,6 +209,8 @@ function parseComparePoint(stream: TokenStream): ComparePoint | undefined {
                 : 0;
         if (valueToken && valueToken.type === 'NUMBER') {
             stream.consume();
+        } else if (stream.strict) {
+            throw new NotationError(`"${opToken.text}" needs a number after it`);
         }
         return {
             operator: mapCompareOperator(opToken),
@@ -209,6 +228,8 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
 
     const diceValue = token.value as { count: number; sides: number; fudge: boolean; customFaces?: number[] };
 
+    if (stream.strict && diceValue.count === 0) throw new NotationError(`${token.text}: dice count must be at least 1`);
+    if (stream.strict && diceValue.sides === 0) throw new NotationError(`${token.text}: a die needs at least 1 side`);
     const count = diceValue.count || 1;
     const sides = diceValue.sides || 6;
     const fudge = diceValue.fudge || false;
@@ -383,6 +404,7 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
                 stream.consume();
                 const cp = parseComparePoint(stream);
                 if (cp) modifiers.targetFailure = cp;
+                else if (stream.strict) throw new NotationError('"f" needs a comparison, e.g. f=1 or f<3');
                 break;
             }
 
@@ -405,6 +427,10 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
         if (!parsed) break;
     }
 
+    if (stream.strict && forcedValues && forcedValues.length > 0 && forcedValues.length !== count) {
+        throw new NotationError(`${token.text}@: expected ${count} forced value(s), got ${forcedValues.length}`);
+    }
+
     return {
         type: 'DiceGroup',
         count,
@@ -416,14 +442,19 @@ function parseDiceGroup(stream: TokenStream): ASTNode {
     };
 }
 
-export function parseToAST(input: string): ASTNode {
+export function parseToAST(input: string, options: { strict?: boolean } = {}): ASTNode {
     const tokens = tokenize(input);
     debug(
         'Tokens:',
         tokens.map((t) => ({ type: t.type, text: t.text })),
     );
-    const stream = new TokenStream(tokens);
-    return parseExpression(stream);
+    const stream = new TokenStream(tokens, options.strict);
+    const ast = parseExpression(stream);
+    if (stream.strict && !stream.isEnd()) {
+        const rest = stream.peek()!;
+        throw new NotationError(`Unexpected "${rest.text}" after the end of the roll`);
+    }
+    return ast;
 }
 
 export function parseDiceNotation(notation: string): {
@@ -479,7 +510,7 @@ export function validateNotation(notation: string): boolean {
                 return false;
             }
         }
-        parseToAST(notation);
+        parseToAST(notation, { strict: true });
         return true;
     } catch {
         return false;

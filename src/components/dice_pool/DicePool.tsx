@@ -44,14 +44,15 @@ export default function DicePool() {
 
     const rollNotation = useCallback(() => {
         const toRoll = notationInput.trim();
-        if (!toRoll) return;
+        if (!toRoll || !validateNotation(toRoll)) return;
         debug('Rolling:', toRoll);
         roll(toRoll);
         setNotationInput('');
     }, [notationInput, roll, setNotationInput]);
 
     const canClear = notationInput.trim().length > 0;
-    const canRoll = notationInput.trim().length > 0;
+    /* Validated directly, not via the debounced input, so the button is never ahead of the check. */
+    const canRoll = notationInput.trim().length > 0 && validateNotation(notationInput.trim());
 
     return (
         <>

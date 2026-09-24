@@ -64,14 +64,20 @@ Uses the success-counting mechanic: sum = successes - failures.
 Located below the dice tabs. Key features:
 
 - **Text input**: Type any dice notation (e.g. `2d6+3`, `4d20kh3`)
-- **Live validation**: `✓` (valid) / `✗` (invalid) indicator
+- **Live validation**: `✓` (valid) / `✗` (invalid) indicator. Validation is strict:
+  incomplete or malformed notation such as `2d6+`, `(2d6`, `2d6>=`, `0d6`, `1d0`,
+  a bare `f` (`5d10>=6f`), a wrong number of `@` values (`2d10@1`), or anything left
+  after the roll (`(1d4+1)d6`) is marked invalid. `/roll` and `{{ddroll}}` still roll
+  such notation as before.
 - **Favorite star**: When notation is valid, click the star to save/remove
   from global favorites
 - **Invalid notation**: Shows question-mark icon linking to the
   [dice notation reference](https://dice-roller.github.io/documentation/guide/notation/)
 - **Enter**: Submit (roll) when valid
 - **Clear** button: Reset editor
-- **Roll** button: Execute the current notation
+- **Roll** button: Execute the current notation (disabled while the notation is invalid)
+- **Cancel** (✗ on the loading bar, with Time to React): discards the roll; nothing is
+  added to history or sent to the chat
 
 ---
 
@@ -82,7 +88,7 @@ Three tabs below a divider in the panel:
 ### Chat Tab
 
 Shows all rolls from the current chat session (most recent first).
-Persisted per-chat via `chatMetadata['3d_dice_rolls']`.
+Persisted per-chat via `chatMetadata['3DDiceRolls']`.
 
 | Interaction   | Behavior                                         |
 | ------------- | ------------------------------------------------ |

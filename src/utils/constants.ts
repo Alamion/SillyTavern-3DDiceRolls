@@ -4,7 +4,13 @@ export const MODULE_NAME = '3DDiceRolls';
 
 export const MAX_EXPLOSIONS = 1000;
 export const MAX_ROLL_SECONDS = 10;
+/** Linear speed (scene units/s) and tipping spin (rad/s) under which a die counts as still. */
 export const VELOCITY_THRESHOLD = 5;
+export const ANGULAR_VELOCITY_THRESHOLD = 1;
+/** How long a die must stay still before its face is read. */
+export const REST_SECONDS = 0.2;
+/** A resting die counts as moving again only this many times above the thresholds. */
+export const REST_WAKE_FACTOR = 4;
 export const FRAME_RATE = 1 / 60;
 
 export const DEFAULT_SETTINGS: DiceRollerSettings = {

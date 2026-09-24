@@ -133,6 +133,7 @@ function RollHistory() {
                         notation: fav.notation,
                         isStarred: true,
                         onToggleStar: () => toggleFavorite(fav.notation),
+                        onBodyClick: () => setNotationInput(fav.notation),
                     })),
                     'No favorites saved',
                 );
@@ -141,6 +142,7 @@ function RollHistory() {
                     recentNotations.map((notation, idx) => ({
                         key: `${notation}-${idx}`,
                         notation,
+                        onBodyClick: () => setNotationInput(notation),
                     })),
                     'No recent notations',
                 );

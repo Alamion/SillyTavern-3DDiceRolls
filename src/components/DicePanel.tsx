@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { DiceRollerProvider } from './DiceRollerContext';
 import DicePool from './dice_pool/DicePool';
 import RollHistory from './RollHistory';
+import ErrorBoundary from './ErrorBoundary';
 
 export default function DicePanel() {
     const [isOpen, setIsOpen] = useState(false);
@@ -23,13 +24,15 @@ export default function DicePanel() {
 
             {isOpen && (
                 <div id="ddr-dice-panel" className="drawer-content fillLeft openDrawer pinnedOpen">
-                    <div className="ddr-dice-panel-body">
-                        <DicePool />
-                    </div>
+                    <ErrorBoundary area="dice panel">
+                        <div className="ddr-dice-panel-body">
+                            <DicePool />
+                        </div>
 
-                    <div className="ddr-dice-panel-divider"></div>
+                        <div className="ddr-dice-panel-divider"></div>
 
-                    <RollHistory />
+                        <RollHistory />
+                    </ErrorBoundary>
                 </div>
             )}
         </DiceRollerProvider>

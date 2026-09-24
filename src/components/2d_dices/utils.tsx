@@ -7,19 +7,13 @@ type SvgAssetProps = {
     alt?: string;
     svgString: string;
     className?: string;
-    onClick?: () => void;
 };
 
-export function SvgImage({ svgString, style = {}, mode = 'image', alt = '', className = '', onClick }: SvgAssetProps) {
+/** Decorative dice image; interactive uses wrap it in a real <button> (see DiceButton). */
+
+export function SvgImage({ svgString, style = {}, mode = 'image', alt = '', className = '' }: SvgAssetProps) {
     const uri = `data:image/svg+xml;base64,${btoa(svgString)}`;
     const data = `url("${uri}")`;
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onClick?.();
-        }
-    };
 
     switch (mode) {
         case 'tile_x':
@@ -59,18 +53,7 @@ export function SvgImage({ svgString, style = {}, mode = 'image', alt = '', clas
                 />
             );
         default:
-            return (
-                <img
-                    src={uri}
-                    alt={alt}
-                    className={className}
-                    style={style}
-                    onClick={onClick}
-                    onKeyDown={handleKeyDown}
-                    tabIndex={onClick ? 0 : undefined}
-                    role={onClick ? 'button' : undefined}
-                />
-            );
+            return <img src={uri} alt={alt} className={className} style={style} />;
     }
 }
 

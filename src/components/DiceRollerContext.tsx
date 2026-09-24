@@ -1,12 +1,21 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { DiceRollerSettings } from '../utils/settings';
-import { getContext, getSettings, subscribeSettings } from '../utils/settings';
-import { handleRollEvent } from '../utils/events';
+import { getSettings, subscribeSettings } from '../utils/settings';
+import { rollFromPanel } from '../utils/events';
 import { onRollResult } from '../dice-logic';
-import { MODULE_NAME } from '../utils/constants';
+import {
+    MAX_HISTORY,
+    finishedInAnotherChat,
+    loadChatHistory,
+    loadChatHistoryWithPending,
+    loadExtensionData,
+    queueHistoryForChat,
+    onChatChanged,
+    saveExtensionData,
+    writeChatHistory,
+} from '../utils/persistence';
 import type { FavoriteNotation, HistoryEntry, HistoryTabType } from '../utils/types-ext';
 
-const MAX_HISTORY = 50;
 const MAX_RECENT_NOTATIONS = 10;
 
 interface DiceRollerContextValue {
@@ -17,9 +26,11 @@ interface DiceRollerContextValue {
     expandedIds: string[];
     notationInput: string;
     activeTab: HistoryTabType;
+    wodDifficulty: number;
 
     setNotationInput: (val: string) => void;
     setActiveTab: (tab: HistoryTabType) => void;
+    setWodDifficulty: (difficulty: number) => void;
     roll: (notation: string) => Promise<void>;
     clearHistory: () => void;
     toggleFavorite: (notation: string) => void;
@@ -43,64 +54,6 @@ function newId(): string {
     }
 }
 
-/* ─── Chat-level history persistence ─── */
-function loadHistoryFromChat(): HistoryEntry[] {
-    try {
-        const context = getContext();
-        const raw = context?.chatMetadata?.[MODULE_NAME];
-        if (Array.isArray(raw)) return raw.slice(0, MAX_HISTORY) as HistoryEntry[];
-    } catch {
-        /* ignore */
-    }
-    return [];
-}
-
-function saveHistoryToChat(
-    history: HistoryEntry[],
-    saveTimeoutRef: { current: ReturnType<typeof setTimeout> | null },
-): void {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-        try {
-            const context = getContext();
-            if (!context?.chatMetadata?.chat_id_hash) return;
-            context.chatMetadata[MODULE_NAME] = history.slice(0, MAX_HISTORY);
-            context.saveMetadata().catch(() => {});
-        } catch {
-            /* ignore */
-        }
-    }, 500);
-}
-
-/* ─── Global extension data (favorites + recent notations) ─── */
-function loadExtensionData(): { favorites: FavoriteNotation[]; recentNotations: string[] } {
-    try {
-        const context = getContext();
-        const data = context?.extensionSettings?.[MODULE_NAME] as Record<string, unknown> | undefined;
-        if (!data) return { favorites: [], recentNotations: [] };
-        return {
-            favorites: Array.isArray(data.favorites) ? (data.favorites as FavoriteNotation[]) : [],
-            recentNotations: Array.isArray(data.recentNotations) ? (data.recentNotations as string[]) : [],
-        };
-    } catch {
-        return { favorites: [], recentNotations: [] };
-    }
-}
-
-function saveExtensionData(favorites: FavoriteNotation[], recentNotations: string[]): void {
-    try {
-        const context = getContext();
-        if (!context?.extensionSettings) return;
-        const data = (context.extensionSettings[MODULE_NAME] as Record<string, unknown>) ?? {};
-        data.favorites = favorites;
-        data.recentNotations = recentNotations;
-        context.extensionSettings[MODULE_NAME] = data;
-        if (context.saveSettingsDebounced) context.saveSettingsDebounced();
-    } catch {
-        /* ignore */
-    }
-}
-
 /* ─── Provider ─── */
 interface DiceRollerProviderProps {
     children: ReactNode;
@@ -108,55 +61,51 @@ interface DiceRollerProviderProps {
 
 export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
     const [settings, setSettings] = useState<DiceRollerSettings>(getSettings);
-    const [history, setHistory] = useState<HistoryEntry[]>([]);
+    const [history, setHistory] = useState<HistoryEntry[]>(loadChatHistory);
     const [favorites, setFavorites] = useState<FavoriteNotation[]>(() => loadExtensionData().favorites);
     const [recentNotations, setRecentNotations] = useState<string[]>(() => loadExtensionData().recentNotations);
-    const [expandedIds, setExpandedIds] = useState<string[]>([]);
+    const [expandedIds, setExpandedIds] = useState<string[]>(() => history.slice(0, 1).map((e) => e.id));
     const [notationInput, setNotationInput] = useState('');
     const [activeTab, setActiveTab] = useState<HistoryTabType>('chat');
+    /* Lives here, not in the WoD tab, so it survives tab switches (tab bodies unmount). */
+    const [wodDifficulty, setWodDifficulty] = useState(6);
 
-    const historyRef = useRef(history);
-    historyRef.current = history;
     const favoritesRef = useRef(favorites);
     favoritesRef.current = favorites;
-    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    /* History as last read from the chat; writing it back would be a no-op save. */
+    const loadedHistoryRef = useRef(history);
 
     /* Subscribe to settings changes */
     useEffect(() => subscribeSettings(setSettings), []);
 
-    /* Load history on mount */
-    useEffect(() => {
-        const loaded = loadHistoryFromChat();
-        setHistory(loaded);
-        if (loaded.length > 0) setExpandedIds([loaded[0].id]);
-    }, []);
-
-    /* Listen for chat changes */
-    useEffect(() => {
-        const context = getContext();
-        if (!context?.eventSource) return;
-        const handler = () => {
-            const loaded = loadHistoryFromChat();
-            setHistory(loaded);
-            setExpandedIds(loaded.length > 0 ? [loaded[0].id] : []);
-        };
-        context.eventSource.on(context.eventTypes.CHAT_CHANGED, handler);
-        return () => {
-            context.eventSource.off(context.eventTypes.CHAT_CHANGED, handler);
-        };
-    }, []);
+    /* Reload history when the chat changes */
+    useEffect(
+        () =>
+            onChatChanged(() => {
+                const { history: loaded, merged } = loadChatHistoryWithPending();
+                /* Entries queued while the chat was closed still have to be written to it. */
+                loadedHistoryRef.current = merged ? [] : loaded;
+                setHistory(loaded);
+                setExpandedIds(loaded.slice(0, 1).map((e) => e.id));
+            }),
+        [],
+    );
 
     /* Listen for roll results */
     useEffect(
         () =>
-            onRollResult((result) => {
+            onRollResult((result, origin) => {
                 const entry: HistoryEntry = {
                     id: newId(),
                     timestamp: Date.now(),
                     result,
                 };
-                setHistory((prev) => [entry, ...prev].slice(0, MAX_HISTORY));
-                setExpandedIds([entry.id]);
+                if (origin.chatId !== undefined && finishedInAnotherChat(origin.chatId)) {
+                    queueHistoryForChat(origin.chatId, entry);
+                } else {
+                    setHistory((prev) => [entry, ...prev].slice(0, MAX_HISTORY));
+                    setExpandedIds([entry.id]);
+                }
 
                 /* Update recent notations (global) */
                 setRecentNotations((prev) => {
@@ -171,7 +120,8 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
 
     /* Persist history on change */
     useEffect(() => {
-        saveHistoryToChat(historyRef.current, saveTimeoutRef);
+        if (history === loadedHistoryRef.current) return;
+        writeChatHistory(history);
     }, [history]);
 
     /* Persist extension data on favorites/recent changes */
@@ -182,7 +132,7 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
     /* ─── Actions ─── */
 
     const roll = useCallback(async (notation: string) => {
-        await handleRollEvent({ notation });
+        await rollFromPanel(notation);
     }, []);
 
     const clearHistory = useCallback(() => {
@@ -222,8 +172,10 @@ export function DiceRollerProvider({ children }: DiceRollerProviderProps) {
         expandedIds,
         notationInput,
         activeTab,
+        wodDifficulty,
         setNotationInput,
         setActiveTab,
+        setWodDifficulty,
         roll,
         clearHistory,
         toggleFavorite,

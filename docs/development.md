@@ -8,7 +8,7 @@
 pnpm install       # Install dependencies
 pnpm run build     # Build to dist/index.js (webpack, production); copies sounds/ → dist/sounds/
 pnpm run dev       # Watch mode
-pnpm run test      # Run 165 tests (Vitest)
+pnpm run test      # Run the Vitest suite
 pnpm exec tsc --noEmit  # Typecheck
 pnpm run lint      # ESLint
 pnpm run lint:fix  # ESLint with auto-fix
@@ -33,8 +33,10 @@ src/
 │   │   ├── geometries.ts # Three.js buffer geometries with face labels
 │   │   ├── factory.ts    # Geometry factory (handles fudge overrides)
 │   │   ├── resource.ts   # ResourceTracker for GPU cleanup
+│   │   ├── rest.ts       # When a die counts as at rest (read-out timing)
+│   │   ├── spawn.ts      # Moves freshly thrown dice apart before physics starts
 │   │   └── sound-manager.ts  # Collision audio via Cannon-es events
-│   ├── errors.ts         # Custom error types (RollCancelledError)
+│   ├── errors.ts         # Custom error types (NotationError, RollCancelledError)
 │   ├── index.ts          # Barrel exports
 │   ├── types.ts          # All type definitions
 │   ├── dice-lexer.ts     # moo-based tokenizer (22 token types)
@@ -143,7 +145,7 @@ The `@` notation (`2d20@20,1`) sets `forcedValues[]` on `DiceGroupNode`. In 2D m
 `DiceRollerProvider` wraps the entire panel and provides via `useDiceRoller()`:
 
 - `settings` — reactive via `subscribeSettings`
-- `history` — per-chat, persisted to `chatMetadata['3d_dice_rolls']`
+- `history` — per-chat, persisted to `chatMetadata['3DDiceRolls']`
 - `favorites` — global, persisted to `extensionSettings['3DDiceRolls']`
 - `recentNotations` — last 10 unique, global persistence
 - `notationInput` — shared editor state
@@ -199,15 +201,12 @@ that SillyTavern loads as an extension bundle.
 
 ## Testing
 
-165 tests across 7 files (Vitest):
+Vitest suites under `tests/`:
 
-- Parser tests (69) — tokenization, AST, forced rolls, edge cases
-- Evaluator basic rolls (18) — including forced rolls, pre-generated values
-- Evaluator combined expressions (8)
-- Evaluator explosion (14) — include reroll + explosion interaction tests
-- Evaluator modifiers (39) — min/max, criticals, botch (csb/cfb), unique, reroll
-- Evaluator reroll (updated)
-- Integration tests (8) — full pipeline, complex expressions
+- `parser/` — tokenization, AST, forced rolls, edge cases
+- `evaluator/` — basic rolls, combined expressions, explosions, modifiers, rerolls
+- `integration/` — full pipeline, complex expressions
+- `backlog-format/` — the `specs/` backlog validator
 
 Run with:
 

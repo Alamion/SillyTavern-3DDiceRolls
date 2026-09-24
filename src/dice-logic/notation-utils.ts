@@ -193,3 +193,11 @@ export function handleDiceNotation(
     }
     return prev;
 }
+
+/** Moves every WoD success threshold (`d10>=N`, `(…d10…)>=N`) in the notation to `difficulty`. */
+export function rewriteWodDifficulty(notation: string, difficulty: number): string {
+    const bounded = Math.max(1, Math.min(10, difficulty));
+    return notation
+        .replace(/((?:\d+)?d10)>=\d+/gi, `$1>=${bounded}`)
+        .replace(/(\([^()]*(?:\d+)?d10[^()]*\))>=\d+/gi, `$1>=${bounded}`);
+}

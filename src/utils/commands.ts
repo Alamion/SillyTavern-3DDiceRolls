@@ -1,5 +1,5 @@
 import { getContext } from './settings';
-import { debug, error, warn } from './logging';
+import { debug, error, consoleWarn } from './logging';
 import { handleRollEvent } from './events';
 import { RollCancelledError } from '../dice-logic';
 
@@ -7,13 +7,13 @@ export function registerRollCommand(): void {
     debug('Registering roll command');
     const context = getContext();
     if (!context) {
-        warn('Context not available - /roll command disabled', 'Dice Roller');
+        consoleWarn('Context not available - /roll command disabled', 'Dice Roller');
         return;
     }
     const { SlashCommandParser, SlashCommand, SlashCommandArgument, SlashCommandNamedArgument, ARGUMENT_TYPE } =
         context;
     if (!SlashCommandParser) {
-        warn('Slash command parser not available - /roll command disabled', 'Dice Roller');
+        consoleWarn('Slash command parser not available - /roll command disabled', 'Dice Roller');
         return;
     }
 

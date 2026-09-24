@@ -1,8 +1,9 @@
 import { getContext, getRollConfig, getSettings } from './settings';
-import { debug, error, warn } from './logging';
+import { debug, error, consoleWarn } from './logging';
 import { executeUnifiedRoll, execute2DRoll, RollCancelledError } from '../dice-logic';
 import type { RollResult } from '../dice-logic';
 import { notifyRollResult } from '../dice-logic';
+import { currentChatId } from './persistence';
 
 export const DICE_ROLL_EVENT_NAME = '3ddicerolls:roll';
 
@@ -15,13 +16,15 @@ export async function handleRollEvent(payload: DiceRollEventPayload): Promise<Ro
     const { notation, quiet } = payload;
 
     if (!notation) {
-        warn('Roll event received without notation', 'Event Handler');
+        consoleWarn('Roll event received without notation', 'Event Handler');
         return null;
     }
 
     debug('Processing roll event for notation:', notation);
 
     const settings = getSettings();
+    // A 3D roll takes seconds; the result belongs to the chat it was started in.
+    const origin = { chatId: currentChatId() };
 
     try {
         const result = settings.enable3dDice
@@ -29,7 +32,7 @@ export async function handleRollEvent(payload: DiceRollEventPayload): Promise<Ro
             : execute2DRoll(notation);
 
         if (!quiet) {
-            notifyRollResult(result);
+            notifyRollResult(result, origin);
         }
         return result;
     } catch (err) {
@@ -45,7 +48,7 @@ export function registerDiceRollEvent(): void {
     const context = getContext();
 
     if (!context?.eventSource) {
-        warn('Event source not available - external roll events disabled', 'Event Handler');
+        consoleWarn('Event source not available - external roll events disabled', 'Event Handler');
         return;
     }
 
@@ -61,10 +64,10 @@ export function registerDiceRollEvent(): void {
                     if (rollPayload.notation) {
                         await handleRollEvent(rollPayload);
                     } else {
-                        warn('Roll event payload missing notation', 'Event Handler');
+                        consoleWarn('Roll event payload missing notation', 'Event Handler');
                     }
                 } else {
-                    warn('Invalid roll event payload', 'Event Handler');
+                    consoleWarn('Invalid roll event payload', 'Event Handler');
                 }
             } catch (err) {
                 if (err instanceof RollCancelledError) {
@@ -78,6 +81,22 @@ export function registerDiceRollEvent(): void {
         debug('Dice roll event listener registered:', DICE_ROLL_EVENT_NAME);
     } catch (err) {
         error('Failed to register dice roll event', 'Event Handler', [err]);
+    }
+}
+
+/**
+ * Roll started from the dice panel. Cancelling a roll (✗ on the loading bar) is a normal user
+ * action, so it resolves to null instead of surfacing as an unhandled rejection.
+ */
+export async function rollFromPanel(notation: string): Promise<RollResult | null> {
+    try {
+        return await handleRollEvent({ notation });
+    } catch (err) {
+        if (err instanceof RollCancelledError) {
+            debug('Roll cancelled by user:', notation);
+            return null;
+        }
+        throw err;
     }
 }
 

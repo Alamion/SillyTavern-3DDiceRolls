@@ -15,9 +15,17 @@ export function validateNotation(notation: string): boolean {
     return validateNotationAST(notation);
 }
 
-const rollCallbacks: Array<(result: RollResult) => void> = [];
+/** Where a roll was started; filled in by the host adapter, opaque to the dice engine. */
+export interface RollOrigin {
+    /** Chat that was open when the roll started. */
+    chatId?: string;
+}
 
-export function onRollResult(callback: (result: RollResult) => void): () => void {
+type RollCallback = (result: RollResult, origin: RollOrigin) => void;
+
+const rollCallbacks: RollCallback[] = [];
+
+export function onRollResult(callback: RollCallback): () => void {
     rollCallbacks.push(callback);
     return () => {
         const index = rollCallbacks.indexOf(callback);
@@ -27,8 +35,8 @@ export function onRollResult(callback: (result: RollResult) => void): () => void
     };
 }
 
-export function notifyRollResult(result: RollResult): void {
-    rollCallbacks.forEach((cb) => cb(result));
+export function notifyRollResult(result: RollResult, origin: RollOrigin = {}): void {
+    rollCallbacks.forEach((cb) => cb(result, origin));
 }
 
 export function formatResultForDisplay(result: RollResult, mode: 'full' | 'compact' | 'chat' = 'full'): string {

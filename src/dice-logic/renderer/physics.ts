@@ -8,6 +8,8 @@ export class PhysicsWorld {
     barrierMaterial: Material;
     lastCallTime = 0;
     private barriers: Body[] = [];
+    /** Half-extents of the throw area inside the barriers. */
+    limits = { x: Infinity, y: Infinity };
 
     constructor(
         public WIDTH: number,
@@ -74,6 +76,7 @@ export class PhysicsWorld {
         // Barriers at 90% of visible area so dice stay on-screen with some margin
         const limitX = (visibleWidth / 2) * 0.9;
         const limitY = (visibleHeight / 2) * 0.9;
+        this.limits = { x: limitX, y: limitY };
 
         const wallConfig = {
             allowSleep: false,

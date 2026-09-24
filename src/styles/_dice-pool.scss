@@ -40,22 +40,49 @@ $hovered-text: var(--SmartThemeEmColor);
     flex-direction: column;
     gap: $spacing-md;
     margin-bottom: $spacing-lg;
+    // Only the dice scroll; the notation editor and Roll/Clear below stay in view.
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* ─── Drawer panel layout ─── */
 .ddr-dice-panel-body {
-    overflow-y: auto;
-    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     padding-right: 4px;
+    container-type: inline-size;
+
+    > :not(.ddr-dice-tab-body) {
+        flex-shrink: 0;
+    }
 }
 
 /* ─── Dice grid ─── */
 .ddr-dice-pool-dice {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    // Wraps to more rows instead of clipping when the drawer is narrow (a fillLeft drawer is
+    // half of what the chat leaves free). Cell = die + padding + border.
+    --ddr-die-size: 60px;
+    grid-template-columns: repeat(auto-fill, minmax(calc(var(--ddr-die-size) + 16px), 1fr));
     gap: $spacing-lg;
     justify-items: center;
+}
+
+// Narrow drawers keep four dice per row by shrinking them instead of stacking two per row.
+@container (max-width: 340px) {
+    .ddr-dice-pool-dice {
+        --ddr-die-size: 44px;
+        gap: $spacing-sm;
+    }
+}
+
+.ddr-dice-pool-die {
+    width: var(--ddr-die-size);
+    height: var(--ddr-die-size);
+    pointer-events: none;
 }
 
 .ddr-dice-pool-item {

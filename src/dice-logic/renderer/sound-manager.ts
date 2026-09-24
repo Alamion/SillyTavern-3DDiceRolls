@@ -33,20 +33,14 @@ import { warn } from '../../utils/logging';
 
 const SOUND_DELAY_MS = 10;
 
-function getExtensionSoundsBaseUrl(): string {
-    const scripts = document.getElementsByTagName('script');
-    // Walk backwards to find our bundle script, then derive sounds path from it
-    for (let i = scripts.length - 1; i >= 0; i--) {
-        const src = scripts[i].src;
-        if (src.includes('3DDiceRolls') || src.includes('3d-dice') || src.includes('/dist/index.js')) {
-            // Script: .../SillyTavern-3DDiceRolls/dist/index.js
-            // Sounds: .../SillyTavern-3DDiceRolls/sounds/   (committed root)
-            //          .../SillyTavern-3DDiceRolls/dist/sounds/  (build copy)
-            const base = src.replace(/\/dist\/index\.js.*$/, '');
-            return base + '/sounds/';
-        }
-    }
-    return './sounds/';
+/**
+ * Sounds ship next to the bundle (`dist/sounds/`). SillyTavern loads extensions as module
+ * scripts, so the bundle knows its own URL; guessing from `<script>` tags picked up other
+ * extensions' `dist/index.js` bundles (F-034). webpack leaves `import.meta` untouched
+ * (`importMeta: false` in webpack.config.js).
+ */
+export function getExtensionSoundsBaseUrl(bundleUrl: string = import.meta.url): string {
+    return new URL('./sounds/', bundleUrl).href;
 }
 
 function loadAudio(src: string): Promise<HTMLAudioElement> {

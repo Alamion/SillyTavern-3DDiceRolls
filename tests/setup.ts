@@ -1,10 +1,9 @@
 import { vi } from 'vitest';
 
-vi.mock('toastr', () => ({
-    default: {
-        success: vi.fn(),
-        warning: vi.fn(),
-        error: vi.fn(),
-        info: vi.fn(),
-    },
-}));
+// SillyTavern provides toastr as a global; the plugin never bundles its own.
+vi.stubGlobal('toastr', {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+});

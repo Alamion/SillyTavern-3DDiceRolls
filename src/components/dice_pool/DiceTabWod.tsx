@@ -1,6 +1,6 @@
-import { memo, useState, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useDiceRoller } from '../DiceRollerContext';
-import { handleDiceNotation } from '../../dice-logic';
+import { handleDiceNotation, rewriteWodDifficulty } from '../../dice-logic';
 import { blendColors } from '../../utils/recolor_svg';
 import DiceButton from './DiceButton';
 import { DiceD10 } from '../2d_dices';
@@ -9,8 +9,7 @@ import type { DiceConfig } from '../dice-config';
 const CRIMSON = '#DC143C';
 
 const WodTab = memo(function WodTab() {
-    const [wodDifficulty, setWodDifficulty] = useState(6);
-    const { settings, notationInput, setNotationInput } = useDiceRoller();
+    const { settings, notationInput, setNotationInput, wodDifficulty, setWodDifficulty } = useDiceRoller();
 
     const wodConfig: DiceConfig = useMemo(
         () => ({
@@ -59,8 +58,17 @@ const WodTab = memo(function WodTab() {
         [notationInput, wodDifficulty, setNotationInput],
     );
 
-    const decrement = useCallback(() => setWodDifficulty((d) => Math.max(1, d - 1)), []);
-    const increment = useCallback(() => setWodDifficulty((d) => Math.min(10, d + 1)), []);
+    const changeDifficulty = useCallback(
+        (next: number) => {
+            const bounded = Math.max(1, Math.min(10, next));
+            setWodDifficulty(bounded);
+            /* Terms already in the editor follow the difficulty instead of mixing thresholds. */
+            setNotationInput(rewriteWodDifficulty(notationInput, bounded));
+        },
+        [notationInput, setNotationInput, setWodDifficulty],
+    );
+    const decrement = useCallback(() => changeDifficulty(wodDifficulty - 1), [changeDifficulty, wodDifficulty]);
+    const increment = useCallback(() => changeDifficulty(wodDifficulty + 1), [changeDifficulty, wodDifficulty]);
 
     return (
         <div className="ddr-dice-tab-body">

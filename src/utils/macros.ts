@@ -1,18 +1,18 @@
 import { getContext } from './settings';
-import { debug, error, warn } from './logging';
+import { debug, error, consoleWarn } from './logging';
 import { execute2DRoll, formatResultForDisplay } from '../dice-logic';
 
 export function registerDiceMacros(): void {
     debug('Registering dice macros');
     const context = getContext();
     if (!context) {
-        warn('Context not available - dice macros disabled', '3DDiceRolls');
+        consoleWarn('Context not available - dice macros disabled', '3DDiceRolls');
         return;
     }
 
     const { macros } = context;
     if (!macros || typeof macros.register !== 'function') {
-        warn('Macro system not available - dice macros disabled', '3DDiceRolls');
+        consoleWarn('Macro system not available - dice macros disabled', '3DDiceRolls');
         return;
     }
 

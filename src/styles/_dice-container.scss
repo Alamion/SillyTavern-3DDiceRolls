@@ -19,7 +19,8 @@
         min-width: 100dvw !important;
         width: 100dvw !important;
         max-width: 100dvw !important;
-        overflow-y: hidden;
+        // Fixed height: the drawer itself scrolls, or rows below the fold are unreachable.
+        overflow-y: auto;
         border-left: 1px solid var(--SmartThemeBorderColor);
         border-right: 1px solid var(--SmartThemeBorderColor);
         border-bottom: 1px solid var(--SmartThemeBorderColor);
@@ -28,4 +29,14 @@
         left: 0 !important;
         backdrop-filter: blur(calc(var(--SmartThemeBlurStrength) * 2));
     }
+}
+
+.ddr-error-boundary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-md;
+    padding: $spacing-lg;
+    color: var(--ddr-color-invalid);
+    font-size: $font-size-sm;
 }

@@ -28,7 +28,7 @@ const DiceButton = memo(function DiceButton({
                 primaryColor={primaryColor}
                 secondaryColor={secondaryColor}
                 value={config.label}
-                style={{ width: '60px', height: '60px', pointerEvents: 'none' }}
+                className="ddr-dice-pool-die"
             />
         </button>
     );

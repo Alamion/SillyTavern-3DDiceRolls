@@ -104,7 +104,9 @@ export interface SillyTavernContext {
     };
     eventSource: {
         on: (event: string, callback: (...args: unknown[]) => void) => void;
-        off: (event: string, callback: (...args: unknown[]) => void) => void;
+        once: (event: string, callback: (...args: unknown[]) => void) => void;
+        removeListener: (event: string, callback: (...args: unknown[]) => void) => void;
+        emit: (event: string, ...args: unknown[]) => Promise<void>;
     };
     eventTypes: {
         EXTENSION_SETTINGS_LOADED: string;
@@ -112,6 +114,8 @@ export interface SillyTavernContext {
         [key: string]: string;
     };
     chatMetadata: Record<string, unknown>;
+    /** Id of the open chat (character or group), undefined when none is open. */
+    getCurrentChatId: () => string | undefined;
     updateChatMetadata: (values: Record<string, unknown>) => void;
     saveMetadata: () => Promise<void>;
     SlashCommand: {

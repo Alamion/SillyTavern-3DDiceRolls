@@ -4,9 +4,13 @@ import { prepareDiceGeometries, startPhysicsRoll } from './renderer';
 import type { DiceGeometryData } from './renderer';
 import type { ASTNode, DiceGroupNode, DiceRoll, RollResult } from './types';
 import { buildGroupKey } from './utils';
-import { debug, warn } from '../utils/logging';
+import { consoleWarn, debug, warn } from '../utils/logging';
 import { MixedRollConfig } from '../utils/settings';
+import { MAX_EXPLOSIONS } from '../utils/constants';
 import { RollCancelledError } from './errors';
+
+/** One clear toast per page load when 3D fails; repeats go to the console only. */
+let fallbackNoticeShown = false;
 
 const SUPPORTED_3D_SIDES = new Set([2, 4, 6, 8, 10, 12, 20, 100]);
 const FUDGE_LABEL_MAP: Record<number, string> = { [-1]: '-', [0]: ' ', [1]: '+' };
@@ -98,7 +102,7 @@ function convertFlatToGroupRolls(
     return rolls;
 }
 
-async function processRethrowLoop(
+export async function processRethrowLoop(
     group: DiceGroupNode,
     allGroupRolls: DiceRoll[],
     flatValues: number[],
@@ -114,7 +118,8 @@ async function processRethrowLoop(
 ): Promise<number[]> {
     const isD100 = group.sides === 100;
     let current = flatValues;
-    for (let iter = 0; iter < 10; iter++) {
+    // Same bound as the 2D evaluator, so 3D and 2D rerolls follow the same rule.
+    for (let iter = 0; iter < MAX_EXPLOSIONS; iter++) {
         const localIndices = detectFn(group, allGroupRolls);
         if (localIndices.length === 0) break;
 
@@ -158,21 +163,27 @@ async function processRethrowLoop(
     return current;
 }
 
-async function processExplosionLoop(
+export async function processExplosionLoop(
     group: DiceGroupNode,
     allGroupRolls: DiceRoll[],
-    multiplier: number,
     handle: { addDice: (extraDiceData: DiceGeometryData[]) => Promise<number[]> },
     config: { diceColor: string; textColor: string },
+    prepareGeometries: typeof prepareDiceGeometries = prepareDiceGeometries,
 ): Promise<void> {
     const isD100 = group.sides === 100;
-    let safetyCounter = 0;
-    while (safetyCounter < 100) {
-        const explodeIndices = detectExplosion(group, allGroupRolls);
-        if (explodeIndices.length === 0) break;
+    const isCompounding = group.modifiers.explode?.compounding ?? false;
+    const isPenetrating = group.modifiers.explode?.penetrating ?? false;
+    let explosionCount = 0;
+    // A compounded die keeps its accumulated value, so whether it explodes again is decided by
+    // the raw value of the die just added, not by re-detecting on the total.
+    let compoundPending: number[] | undefined;
 
-        const isCompounding = group.modifiers.explode?.compounding ?? false;
-        const isPenetrating = group.modifiers.explode?.penetrating ?? false;
+    while (explosionCount < MAX_EXPLOSIONS) {
+        const detected = isCompounding
+            ? (compoundPending ?? detectExplosion(group, allGroupRolls))
+            : detectExplosion(group, allGroupRolls);
+        const explodeIndices = detected.slice(0, MAX_EXPLOSIONS - explosionCount);
+        if (explodeIndices.length === 0) break;
 
         for (const idx of explodeIndices) {
             allGroupRolls[idx] = {
@@ -183,11 +194,12 @@ async function processExplosionLoop(
             };
         }
 
-        const extraData = prepareDiceGeometries(
+        const extraData = prepareGeometries(
             [
                 {
-                    sides: isD100 ? 10 : group.sides,
-                    count: explodeIndices.length * multiplier,
+                    // A d100 comes back as its tens and ones dice.
+                    sides: group.sides,
+                    count: explodeIndices.length,
                     modifiers: {},
                     fudge: group.fudge,
                 },
@@ -198,41 +210,56 @@ async function processExplosionLoop(
         const explosionValues = await handle.addDice(extraData.geometries);
 
         let evIdx = 0;
-        for (let ei = 0; ei < explodeIndices.length; ei++) {
-            const explodeIdx = explodeIndices[ei];
+        const nextCompoundPending: number[] = [];
+        for (const explodeIdx of explodeIndices) {
+            let rawVal: number;
+            if (isD100) {
+                const tens = explosionValues[evIdx++] % 10;
+                const ones = explosionValues[evIdx++] % 10;
+                rawVal = tens * 10 + ones === 0 ? 100 : tens * 10 + ones;
+            } else {
+                rawVal = explosionValues[evIdx++];
+            }
 
-            for (let p = 0; p < multiplier; p++) {
-                let rawVal = explosionValues[evIdx++];
+            const explosionVal = isPenetrating ? Math.max(0, rawVal - 1) : rawVal;
 
-                if (isD100) {
-                    const tens = rawVal % 10;
-                    const ones = p + 1 < multiplier ? explosionValues[evIdx++] % 10 : 0;
-                    rawVal = tens * 10 + ones === 0 ? 100 : tens * 10 + ones;
+            if (isCompounding) {
+                const existing = allGroupRolls[explodeIdx];
+                allGroupRolls[explodeIdx] = {
+                    ...existing,
+                    value: existing.value + explosionVal,
+                    compounded: true,
+                };
+                if (detectExplosion(group, [{ sides: group.sides, value: rawVal, dropped: false }]).length > 0) {
+                    nextCompoundPending.push(explodeIdx);
                 }
-
-                const explosionVal = isPenetrating ? Math.max(0, rawVal - 1) : rawVal;
-
-                if (isCompounding) {
-                    const existing = allGroupRolls[explodeIdx];
-                    allGroupRolls[explodeIdx] = {
-                        ...existing,
-                        value: existing.value + explosionVal,
-                        compounded: true,
-                    };
-                } else {
-                    allGroupRolls.push({
-                        sides: isD100 ? 100 : group.sides,
-                        value: explosionVal,
-                        dropped: false,
-                        penetrating: isPenetrating || undefined,
-                    });
-                }
-
-                if (!isD100) break;
+            } else {
+                allGroupRolls.push({
+                    sides: group.sides,
+                    value: explosionVal,
+                    dropped: false,
+                    penetrating: isPenetrating || undefined,
+                });
             }
         }
 
-        safetyCounter++;
+        explosionCount += explodeIndices.length;
+        if (isCompounding) compoundPending = nextCompoundPending;
+    }
+
+    if (explosionCount >= MAX_EXPLOSIONS) {
+        // Dice that would still explode past the limit are marked, as the 2D evaluator does.
+        const unprocessed = isCompounding
+            ? (compoundPending ?? detectExplosion(group, allGroupRolls))
+            : detectExplosion(group, allGroupRolls);
+        for (const index of unprocessed) {
+            allGroupRolls[index] = {
+                ...allGroupRolls[index],
+                exploded: true,
+                compounded: isCompounding || undefined,
+                penetrating: isPenetrating || undefined,
+            };
+        }
     }
 }
 
@@ -249,21 +276,21 @@ export async function executeUnifiedRoll(notation: string, config?: Partial<Mixe
         timeToReactSeconds: config?.timeToReactSeconds ?? 5,
     };
 
-    let ast: ASTNode | null = null;
+    // Notation and evaluation errors surface exactly as in 2D; only the 3D work below falls back.
+    const ast = parseToAST(notation);
 
-    try {
-        ast = parseToAST(notation);
+    if (hasForcedValues(ast) && defaultConfig.enable3dDice && has3DSupportedDice(ast)) {
+        warn(`Forced rolls (@) not supported in 3D mode — rolling ${notation} with random physics`, '3DDiceRolls');
+    }
 
-        const hasForced = hasForcedValues(ast);
+    if (!defaultConfig.enable3dDice || !has3DSupportedDice(ast)) {
+        return evaluateDiceAST(ast, notation);
+    }
 
-        if (hasForced && defaultConfig.enable3dDice && has3DSupportedDice(ast)) {
-            warn(`Forced rolls (@) not supported in 3D mode — rolling ${notation} with random physics`, '3DDiceRolls');
-        }
+    let activeHandle: { arrangeAndDismiss: () => void } | undefined;
 
-        if (!defaultConfig.enable3dDice || !has3DSupportedDice(ast)) {
-            return evaluateDiceAST(ast, notation);
-        }
-
+    /** Throws and settles the 3D dice; returns their values per group, or undefined to roll in 2D. */
+    const run3D = async (): Promise<Map<string, DiceRoll[]> | undefined> => {
         const diceGroupNodes = extractDiceGroupNodes(ast);
         const flatGroups = diceGroupNodes.map((g) => ({
             sides: g.sides,
@@ -281,7 +308,7 @@ export async function executeUnifiedRoll(notation: string, config?: Partial<Mixe
 
         if (geometries.length === 0) {
             warn('No 3D geometries could be created — falling back to 2D roll', '3DDiceRolls');
-            return evaluateDiceAST(ast, notation);
+            return undefined;
         }
 
         const handle = startPhysicsRoll(
@@ -297,17 +324,16 @@ export async function executeUnifiedRoll(notation: string, config?: Partial<Mixe
             geometries,
             groupSizes,
         );
+        activeHandle = handle;
 
         let flatValues = await handle.settle;
 
-        // Sanitize flatValues: replace undefined/NaN with a random fallback
-        flatValues = flatValues.map((v, i) => {
-            if (typeof v !== 'number' || !Number.isFinite(v)) {
-                warn(`Physics returned invalid value for die ${i}, using random fallback`, '3DDiceRolls');
-                return Math.floor(Math.random() * 20) + 1;
-            }
-            return v;
-        });
+        if (flatValues.some((v) => typeof v !== 'number' || !Number.isFinite(v))) {
+            warn('Physics returned an invalid die value — falling back to 2D', '3DDiceRolls');
+            handle.arrangeAndDismiss();
+            activeHandle = undefined;
+            return undefined;
+        }
 
         const preGeneratedValues = new Map<string, DiceRoll[]>();
         let flatOffset = 0;
@@ -317,6 +343,8 @@ export async function executeUnifiedRoll(notation: string, config?: Partial<Mixe
             const multiplier = group.sides === 100 ? 2 : 1;
             const key = buildGroupKey(group, g);
             const initialPhysCount = groupSizes[g];
+            // A group without 3D dice (e.g. d7) has no physical values; the evaluator rolls it in 2D.
+            if (!initialPhysCount) continue;
 
             const allGroupRolls = convertFlatToGroupRolls(flatValues, flatOffset, group, multiplier, group.count);
 
@@ -349,7 +377,7 @@ export async function executeUnifiedRoll(notation: string, config?: Partial<Mixe
                 group.modifiers.unique?.once || undefined,
             );
 
-            await processExplosionLoop(group, allGroupRolls, multiplier, handle, defaultConfig);
+            await processExplosionLoop(group, allGroupRolls, handle, defaultConfig);
 
             groupSizes[g] = allGroupRolls.length;
             preGeneratedValues.set(key, allGroupRolls);
@@ -357,19 +385,32 @@ export async function executeUnifiedRoll(notation: string, config?: Partial<Mixe
         }
 
         handle.arrangeAndDismiss();
+        activeHandle = undefined;
+        return preGeneratedValues;
+    };
 
-        return evaluateDiceAST(ast, notation, preGeneratedValues);
+    let preGeneratedValues: Map<string, DiceRoll[]> | undefined;
+    try {
+        preGeneratedValues = await run3D();
     } catch (err) {
         if (err instanceof RollCancelledError) {
             throw err;
         }
+        // Clear dice already on screen before falling back to 2D.
+        activeHandle?.arrangeAndDismiss();
         const errMsg = err instanceof Error ? err.message : String(err);
-        warn(errMsg, 'Unified roll failed');
-        if (!ast) {
-            ast = parseToAST(notation);
+        if (fallbackNoticeShown) {
+            consoleWarn(`${errMsg} — rolled ${notation} in 2D`, '3D dice failed');
+        } else {
+            fallbackNoticeShown = true;
+            warn(
+                `3D dice could not run (${errMsg}), so ${notation} was rolled in 2D. Further 3D failures are logged to the console.`,
+                '3D dice unavailable',
+            );
         }
-        return evaluateDiceAST(ast!, notation);
     }
+
+    return evaluateDiceAST(ast, notation, preGeneratedValues);
 }
 
 export function execute2DRoll(notation: string): RollResult {
