@@ -1,99 +1,8 @@
-# TODO — 3DDiceRolls Feature Roadmap
+# Narrative dice design notes
 
-Tasks are grouped by **area** (logical dependency) and ordered by priority within each area.
-Each task includes: name, description, priority, effort, impact, and dependencies.
+Preserved from the pre-spec TODO (item 5.1). Input for the spec behind TODO T-032; not a specification.
 
----
-
-## Legend
-
-- ✅ **DONE** — fully implemented (see [CHANGELOG.md](CHANGELOG.md))
-- 🟡 **IN PROGRESS** — partially implemented
-- ⬜ **NOT DONE** — not started
-
----
-
-## Area 1: Core Parser & Roller
-
-### 1.5 — `<>` Lexer Optimization ⬜
-
-**Priority:** Low | **Effort:** Low | **Impact:** Low
-
-Use moo's `%{tokenType}` feature for COMPARE tokens (`>`, `>=`, etc.) instead of separate regex tokens.
-
-**Status:** Tried moo.keywords() — API conflict with moo's fast single-char matching. Not compatible. Low priority.
-
----
-
-### 1.6 — Fantasy AGE Stunt Dice (dS) ⬜
-
-**Priority:** Medium | **Effort:** Medium | **Impact:** Low-Medium
-
-Support Fantasy AGE stunt dice mechanic: `1dS` — roll 2d6 + a red stunt die.
-
----
-
-## Area 2: Sound & Physics
-
-### 2.3 — Drag Specific Dice ⬜
-
-**Priority:** Low | **Effort:** High | **Impact:** Low-Medium
-
-Allow dragging individual dice via raycasting click+hold detection.
-
-**Why high effort:** Requires building a `MouseConstraint`-like system from scratch:
-
-- Toggle `body.type` between `Body.STATIC` (while grabbed) and `Body.DYNAMIC` (on release)
-- Project the mouse ray onto a plane at the die's Z-depth to compute the constraint target
-- Apply a spring-like force each frame to follow the cursor
-- Handle release physics (inheriting momentum for a natural flick)
-- Touch/mobile support adds another layer
-
-**No existing infrastructure:** `dice-box-threejs` has only an unfinished `selector` stub. Cannon-es has no built-in mouse constraint.
-
-**Recommendation:** If drag is desired, implement "nudge/impulse on click" first (much simpler — just apply a directional force on click) rather than full drag.
-
----
-
-## Area 3: Remaining Dice Pool & WoD
-
-### 3.2 — Dice Pool: Multi-Tab System 🟡
-
-**Priority:** High | **Effort:** High | **Impact:** High
-
-**Done:** Standard, D&D, and WoD tabs implemented with tab switching.
-
-**Remaining:**
-
-- WoD tab: full VtM dice pool (each d10 gets `>=difficulty` modifier on left-click)
-- `d10 roll = 1 => total result -= 1` botch mechanic
-- Extensible tab registration for future game systems
-- Per-tab dice pool persistence
-
----
-
-### 3.8 — VtM Dice Pool 🟡
-
-**Priority:** Medium | **Effort:** Medium | **Impact:** Medium
-
-**Done:** WoD tab with difficulty slider, `d10>=difficulty` button, increment/decrement.
-
-**Remaining:**
-
-- Botch mechanic (`d10=1` decrements total)
-- Full pool behavior (all dice use `>=difficulty`)
-- Dice count persistence per tab
-
----
-
-## Area 5: Symbolic & Narrative Dice
-
-### 5.1 — Star Wars FFG / Genesys Narrative Dice ⬜
-
-**Priority:** Medium | **Effort:** Moderate | **Impact:** Medium
-**Depends on:** 5.0 (for shared face-label plumbing)
-
-#### High-Level Approach
+## High-Level Approach
 
 Narrative dice run through a **parallel code path**, not a refactor of the numeric system. Our existing numeric dice system stays untouched. The narrative dice get their own:
 
@@ -102,7 +11,7 @@ Narrative dice run through a **parallel code path**, not a refactor of the numer
 - **Evaluator path** (returns `NarrativeResult` with symbol counts, not `sum: number`)
 - **3D renderer** (new face-label sets with symbols)
 
-#### How the Reference Does It
+## How the Reference Does It
 
 `context/dice-roller/src/rollers/dice/narrative.ts:1-549`:
 
@@ -133,7 +42,7 @@ interface NarrativeResult {
 
 **Lexer** (`context/dice-roller/src/lexer/lexer.ts:167-187`): Uses a regex that captures letter-and-number notation (`3g2p`), normalizes abbreviations (`pro→y`, `boo→b`, etc.), and expands digits (`3g` → `ggg`).
 
-#### What We Need to Change
+## What We Need to Change
 
 | File                                    | What to change                                                                                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -148,7 +57,7 @@ interface NarrativeResult {
 | `src/utils/formatting.ts`               | New `formatNarrativeResult()` showing symbol counts                                                                                                    |
 | `src/components/RollHistory.tsx`        | Display narrative results (symbol counts, not a single total)                                                                                          |
 
-#### Core Design Decisions
+## Core Design Decisions
 
 1. **Narrative result is not a single `total`** — `NarrativeResult` replaces `DiceGroupResult.sum` for narrative groups. In hybrid rolls (`2d6+1g`), numeric groups contribute to `total`, narrative groups contribute to the `NarrativeResult` object.
 
@@ -160,7 +69,7 @@ interface NarrativeResult {
 
 5. **Letter-based notation is preferred** — `2g1p` over `2dA1dD`. It's the standard in the FFG community and matches the reference.
 
-#### Not Doing (Scope Boundaries)
+## Not Doing (Scope Boundaries)
 
 - **No generic symbolic framework** — not creating a pluggable system for arbitrary face symbols
 - **No crossover arithmetic** — narrative dice never mix with binary operators
@@ -169,27 +78,3 @@ interface NarrativeResult {
 - **No Genesys-specific symbol rendering on 3D dice** (initially) — start with text labels (e.g. `S`, `A`, `T`) before custom icon textures
 - **No dice pool UI** — narrative dice roll from the notation editor / `/roll` command only; tab UI is future work
 - **No force die 3D textures** — force die symbols (light/dark) are text labels initially
-
----
-
-## Dependency Graph
-
-```
-1.5 (<> Lexer Opt)
-1.6 (Stunt Dice)
-
-3.2 (Multi-Tab) ──────────── 3.8 (VtM Dice Pool) 🟡
-
-5.0 (Fate Display) ─────── 5.1 (Narrative Dice) ─── 3.2 (future tab)
-
-2.3 (Drag Dice)
-```
-
----
-
-## Suggested Execution Order
-
-| Phase       | Tasks                    | Rationale                                                  |
-| ----------- | ------------------------ | ---------------------------------------------------------- |
-| **Phase 5** | 5.1                      | Narrative dice system (depends on 5.0 face-label plumbing) |
-| **Phase 6** | 3.2, 3.8 (remaining WoD) | VtM botch mechanic + full pool behavior                    |

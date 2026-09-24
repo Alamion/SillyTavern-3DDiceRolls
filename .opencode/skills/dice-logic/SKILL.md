@@ -46,6 +46,7 @@ Min/Max always apply (including pre-generated values). Explode/Reroll/Unique onl
 - **Lexer ordering**: DICE → Modifier tokens → Compare operators. Moo's longest-match + first-defined resolves ties (e.g., `4d6` then `d2` as DICE, not MOD_DROP).
 - **DICE-to-DROP fallback**: A DICE token matching `/^d\d+$/` in the modifier loop is converted to MOD_DROP (handles `4d6d2`).
 - **Modifier token text** carries variant info (e.g., `!!p` → `{ compounding: true, penetrating: true }`).
+- **Two parse modes**: `parseToAST(n, { strict: true })` throws `NotationError` on malformed input (unexpected end, unclosed `(`, compare without a number, trailing input, `0d`/`d0`, bare `f`, wrong `@` count); `validateNotation` uses it. The default lenient mode (all rolling paths) keeps the historical recovery — unexpected tokens become 0 with a warning — so notation that rolls today keeps rolling until T-008.
 
 ### MockRandom Consumption Order
 

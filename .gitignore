@@ -31,3 +31,6 @@ yarn-error.log*
 
 .idea/
 nul
+.specify
+# dev source maps
+dist/*.map

@@ -6,7 +6,7 @@ SillyTavern extension: 3D dice rolling with dice notation (`2d6+2`, `4d20kh3`). 
 
 ## Key Reference
 
-**Always check `context/st-context.js`** for actual SillyTavern `getContext()` API signatures.
+**Always check `context/SillyTavern/public/scripts/st-context.js`** for actual SillyTavern `getContext()` API signatures. `context/` is git-ignored; populate it with `scripts/setup-context.sh`.
 
 ## Commands
 
@@ -15,11 +15,50 @@ SillyTavern extension: 3D dice rolling with dice notation (`2d6+2`, `4d20kh3`). 
 | `pnpm install`               | Install dependencies                                                        |
 | `pnpm run build`             | Build to `dist/index.js` (webpack, prod); copies `sounds/` → `dist/sounds/` |
 | `pnpm run dev`               | Watch mode                                                                  |
-| `pnpm run test`              | 165 tests (Vitest, 7 files)                                                 |
-| `pnpm exec tsc --noEmit`     | Typecheck                                                                   |
+| `pnpm run test`              | Vitest suite                                                                |
+| `pnpm run typecheck`         | Typecheck (`tsc --noEmit`)                                                  |
 | `pnpm run lint` / `lint:fix` | ESLint 9 + TS                                                               |
+| `pnpm run validate:backlog`  | Check `specs/ROADMAP.md`, `specs/TODO.md`, `specs/TOFIX.md` format          |
+
+All five gates (`typecheck`, `lint`, `test`, `build`, `validate:backlog`) MUST pass before any commit (constitution IV/V).
 
 > **Important:** When adding new files in `src/components/`, especially tab components, don't forget to add them to the Project Structure section below.
+
+## Constitution & Spec Workflow
+
+`.specify/memory/constitution.md` (v1.0.0) governs the project — principles I–X:
+
+1. Holistic, modular plugin (dice-logic / renderer / components / utils adapters)
+2. App API first — cache context functions, read data fields (`chatMetadata`, …) fresh; emitter has `on`/`once`/`removeListener` (no `off`)
+3. Pure, deterministic dice core — no DOM/ST in `dice-logic/` (outside `renderer/`); limits are engine invariants; every input is untrusted
+4. Strict TypeScript, lint & format discipline
+5. Risk-proportional testing — bug fixes start with a failing regression test
+6. Stable delivered contracts (notation, output formats, `/roll`, `{{ddroll}}`, `3ddicerolls:*`, `RollTheDice`, persistence)
+7. Graceful, observable degradation — no silent fallbacks, no toast spam
+8. Native, accessible, lightweight experience
+9. Spec-driven execution with a maintenance path
+10. Language policy — conversation in any language; all artifacts English-only
+
+Features and contract changes go through speckit (`/speckit.specify` → `/speckit.plan` → `/speckit.tasks` → `/speckit.implement`); feature specs live in `specs/NNN-*`.
+
+## Maintenance changes
+
+A change may skip the spec only if it adds **no new user capability** and alters **no delivered contract** (see the constitution's "Delivered Contracts" table). When unclear, write a spec. Maintenance changes:
+
+- are tracked as a `specs/TOFIX.md` (defect) or `specs/TODO.md` (task) entry;
+- start with a failing regression test where the behavior is testable;
+- remove the TOFIX entry / mark the TODO entry done in the same change;
+- get one user-facing line in `CHANGELOG.md` under the release.
+
+The maintenance path shortens documentation, never verification.
+
+## Backlog (`specs/`)
+
+- `specs/ROADMAP.md` — product paths (slugs, status, scope) and the **release plan** mapping `T-###` / `F-###` to versions.
+- `specs/TODO.md` — task queue (`T-###`), `specs/TOFIX.md` — open defects (`F-###`).
+- `specs/notes/` — preserved design notes (not specifications).
+- Format owner: `scripts/validate-backlog.ts`; how-to: `.opencode/skills/backlog/SKILL.md`. Read the skill before editing the backlog.
+- Items marked "backport" already exist in TTGamer (`../../../../ttgamer/src/dice_roller/`, i.e. `WebstormProjects/ttgamer`); port rather than redesign.
 
 ## SillyTavern Integration
 
@@ -31,12 +70,17 @@ SillyTavern extension: 3D dice rolling with dice notation (`2d6+2`, `4d20kh3`). 
 ```
 src/
 ├── dice-logic/          # Lexer, parser, evaluator, roller, orchestrator, notation-utils
-│   └── renderer/        # Three.js + Cannon-es 3D visualization, sound-manager
-├── utils/               # settings, commands, body-injection, events, logging, constants, function-tools, macros, recolor_svg, types-ext
-├── components/          # DicePanel, DicePool (~141 lines), dice-config, DiceButton, DiceTab{Standard,Dnd,Wod}, RollHistory, DiceRollerContext, SettingsPanel, 2d_dices/
+│   └── renderer/        # Three.js + Cannon-es 3D visualization, sound-manager, rest (die-at-rest check), spawn (spawn separation)
+├── utils/               # settings, persistence, commands, body-injection, events, logging, constants, function-tools, macros, recolor_svg, types-ext
+├── components/          # DicePanel, DicePool, dice-config, DiceButton, DiceTab{Standard,Dnd,Wod}, RollHistory, DiceRollerContext, SettingsPanel, ErrorBoundary, 2d_dices/
 ├── styles/              # SCSS (_variables, index, dice-pool, roll-history, dice-container, extension_settings, loading-indicator)
 ├── index.tsx            # Entry point
 └── global.d.ts          # SillyTavern API types
+scripts/validate-backlog.ts  # Backlog format validator (run with plain `node`)
+specs/                   # ROADMAP.md, TODO.md, TOFIX.md, notes/, NNN-* feature specs
+tests/                   # Vitest (evaluator/, parser/, logic/, integration/, contract/, renderer/, backlog-format/); support/fakeHost.ts fakes the ST host
+.specify/                # speckit (constitution, templates, sh scripts)
+.opencode/               # speckit commands; skills: dice-logic, backlog
 ```
 
 ## Settings
@@ -62,7 +106,7 @@ Access: `getSettings()` returns copy; `getRollConfig()` returns `{ diceColor, te
 ## API Access
 
 ```typescript
-import { getContext, getSettings, getRollConfig, subscribeSettings } from './utils/settings';
+import { getContext, getLiveContext, getSettings, getRollConfig, subscribeSettings } from './utils/settings'; // getLiveContext for data fields (chatMetadata, …)
 import { debug, info, warn, error } from './utils/logging';
 import {
     executeUnifiedRoll,
@@ -126,7 +170,7 @@ body-injection (manual React roots)
 
 - `DiceRollerProvider` wraps the entire panel, provides via `useDiceRoller()`:
     - `settings` — reactive `DiceRollerSettings` (subscribes to `subscribeSettings`)
-    - `history` — `HistoryEntry[]` per-chat, persisted to `chatMetadata['3d_dice_rolls']`
+    - `history` — `HistoryEntry[]` per-chat, persisted to `chatMetadata['3DDiceRolls']`
     - `favorites` — `FavoriteNotation[]` global, persisted to `extensionSettings['3DDiceRolls'].favorites`
     - `recentNotations` — `string[]` global (last 10 unique), persisted to `extensionSettings['3DDiceRolls'].recentNotations`
     - `notationInput` — shared between DicePool editor and RollHistory click-to-set
@@ -158,10 +202,13 @@ Use `--SmartTheme*` CSS vars from `src/styles/_variables.scss`.
 ## Logging
 
 ```typescript
-import { debug, info, warn, error } from './utils/logging';
+import { debug, consoleWarn, info, warn, error } from './utils/logging';
 ```
 
+Toasts use SillyTavern's global `toastr` (never bundle one). Toast only what the user must see or act on.
+
 - `debug(...args)` — console only (dev)
+- `consoleWarn(msg, title?, consoleArgs?)` — console warning, no toast (missing optional app features, bad payloads from other extensions)
 - `info(msg, title?, consoleArgs?)` — toastr.success
 - `warn(msg, title?, consoleArgs?)` — toastr.warning
 - `error(msg, title?, consoleArgs?)` — toastr.error
@@ -177,14 +224,17 @@ For modifier evaluation order, lexer/parser architecture tokens & rules, MockRan
 
 ## Context
 
-There are a bunch of useful references laying in `context/` folder:
+Read-only reference material in the git-ignored `context/` folder (shallow clones; create or refresh with `scripts/setup-context.sh`). Never import or bundle it.
 
-- `context/dice-box-threejs` - npm lib that realizes 3D dice visualization and rolling + some extra features like sound or texturing
-- `context/dice-roller` - Obsidian plugin with similar functionality as our one.
-- `context/Extension-Dice` - Example of SillyTavern extension
-- `context/original_app_css` - SillyTavern's css files
-- `context/st-context.js` — SillyTavern API that plugin can use
-- `context/variables.css` — All variables granted by SillyTavern
+- `context/SillyTavern/` — SillyTavern app source (`release` branch). Key files:
+    - `public/scripts/st-context.js` — the `getContext()` API the plugin can use
+    - `public/script.js` — core app (chat loading, `chat_metadata`, events wiring)
+    - `public/scripts/events.js` — `event_types`; `public/lib/eventemitter.js` — emitter surface (`on`/`once`/`removeListener`, no `off`)
+    - `public/scripts/system-messages.js`, `public/scripts/popup.js`, `public/scripts/slash-commands/`, `public/scripts/macros/`
+    - `public/style.css` (`:root` `--SmartTheme*` variables) and `public/css/` — app styles
+- `context/dice-box-threejs` — npm lib for 3D dice visualization and rolling, plus sound and texturing
+- `context/dice-roller` — Obsidian dice plugin with similar functionality (narrative dice reference: `src/rollers/dice/narrative.ts`)
+- `context/Extension-Dice` — SillyTavern's official dice extension (example extension, core `/roll`)
 
 ## Symbols and emojis
 
